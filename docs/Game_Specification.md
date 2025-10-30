@@ -429,3 +429,126 @@ func migrate_v1_to_v2(data: Dictionary) -> Dictionary:
   - Word pool previewer: shows sampling distribution and example words per difficulty.
   - Relic composer: craft a relic JSON and preview its computed `ActiveModifiers` impact.
   - Save migration tester: load historical samples and show diffs.
+
+## 21. Enemy selection & spawning (biome / room rules)
+
+This section specifies how to determine which enemies spawn in a biome or room. The goal is a data-driven, designer-friendly, deterministic system that composes encounters from an enemy pool while respecting difficulty budgets and runtime modifiers.
+
+21.1 Principles
+
+- Data-driven: designers declare enemy pools, weights, complexity costs and tags in JSON (or `.tres`).
+- Deterministic: selection uses a seeded RNG so previews and tests are reproducible.
+- Budgeted complexity: each room has a complexity budget; enemies consume cost toward that budget so rooms remain balanced.
+- Constraint-aware: respect min/max counts, banned tag combos, and runtime filters (relics, difficulty).
+
+21.2 Data model (recommended)
+
+- Enemy definition (data/enemies/*.json) should include:
+- id, display_name, sprite
+- complexity: number (cost)
+- weight: number (sampling weight)
+- min_count, max_count
+- tags: ["mirror","flicker"]
+- components: ["mirror_behavior"]
+- spawn_mode: "single"|"swarm"|"ambush"|"wave"
+- reward_seeds
+
+- Biome definition (data/biomes/*.json) should include:
+- base_room_complexity: number
+- complexity_scale_per_room: number
+- enemy_pool: [ {"enemy_id":"echo_wisp","weight":10}, ... ]
+- allowed_tags (optional)
+- banned_tag_combinations (optional)
+
+21.3 Selection algorithm (weighted sampling + complexity budget)
+
+Recommended approach (pseudocode):
+
+```
+func choose_enemies(biome, room_index, rng, active_modifiers) -> Array:
+    var budget = biome.base_room_complexity + room_index * biome.complexity_scale_per_room
+    budget *= (1 + active_modifiers.get("spawn_density_multiplier", 0))
+    var selected = []
+    var attempts = 0
+    var candidates = filter_candidates(biome.enemy_pool, active_modifiers, biome.allowed_tags)
+    while budget > 0 and attempts < 200:
+        attempts += 1
+        var enemy_id = weighted_sample(candidates, rng)
+        var enemy = load_enemy_definition(enemy_id)
+        if selected.count(enemy_id) >= enemy.get("max_count", 999): continue
+        if enemy.get("complexity", 1) > budget: continue
+        if violates_banned_combos(selected, enemy, biome.banned_tag_combinations): continue
+        selected.append(enemy_id)
+        budget -= enemy.get("complexity", 1)
+    return selected
+```
+
+Notes:
+- Cap attempts to avoid infinite loops.
+- Use a fallback pool (low-cost enemies) if selection fails to fill expected content.
+
+21.4 Templates & augmentation
+
+- Allow designer-crafted `encounter_templates` (predefined enemy lists) selectable by chance. Templates can be used for scripted or signature rooms and then augmented with random adds using the budget method.
+
+21.5 Runtime modifiers and integration
+
+- Apply active modifiers from `GameState` before selection (e.g., `spawn_density_multiplier` increases the budget).
+- Difficulty scaling can adjust base_room_complexity or multiply enemy complexity to raise challenge.
+- Tag filters: relics or events can add or remove allowed tags at runtime; apply these in `filter_candidates()`.
+
+21.6 Spawn scheduling & pacing
+
+- `CombatRoom` precomputes the spawn list and schedules spawns over time rather than instancing all at once. Use `spawn_mode` to vary timing (swarm = clustered, ambush = simultaneous reveal).
+- Use `EnemyContainer` object pool for instantiation to avoid allocations.
+
+21.7 Deterministic RNG & testing
+
+- Use Godot's `RandomNumberGenerator` seeded per-run and optionally per-room to produce reproducible spawn lists. Expose seed to designers for preview.
+- Add unit tests that assert deterministic outputs for a given seed and biome file.
+
+21.8 Balancing guidance
+
+- Map complexity to expected seconds-to-clear or cognitive load; tune costs by playtests (e.g., simple = 1, medium = 2, hard = 4).
+- Track telemetry (avg clear time, failure rate) and adjust weights/complexity accordingly.
+
+21.9 Example JSON snippets
+
+Biome (`data/biomes/glade.json`):
+```
+{
+"id": "glade",
+"base_room_complexity": 6,
+"complexity_scale_per_room": 0.5,
+"enemy_pool": [
+    {"enemy_id": "echo_wisp", "weight": 10},
+    {"enemy_id": "flicker", "weight": 20},
+    {"enemy_id": "loomer", "weight": 5}
+],
+"banned_tag_combinations": [["mirror","reverse"]]
+}
+```
+
+Enemy (`data/enemies/echo_wisp.json`):
+```
+{
+"id": "echo_wisp",
+"complexity": 2,
+"weight": 10,
+"min_count": 0,
+"max_count": 4,
+"tags": ["mirror"],
+"components": ["mirror_behavior"],
+"reward_seeds": 3
+}
+```
+
+21.10 Editor tooling & previews
+
+- Provide a `Spawn Previewer` editor tool that runs the selection algorithm with a fixed seed and shows multiple sample rooms and histograms of enemy picks. This helps designers tune weights and complexity curves without running the full game.
+
+21.11 Edge cases & safety
+
+- If all candidates are filtered out by tags/constraints, fall back to a `safe_fallback_pool` to ensure content is present.
+- Respect `max_active_enemies` and performance caps; selection must never schedule more than configured live enemies.
+- Log and surface selection failures during development (DataValidator / CI) so designers can fix pools or templates.
