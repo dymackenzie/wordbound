@@ -16,9 +16,9 @@ public partial class TypingManager : Node
 
 	private const int DefaultBufferCapacity = 64;
 
-	private readonly StringBuilder _buffer = new(DefaultBufferCapacity);
+	private readonly StringBuilder _buffer = new StringBuilder(DefaultBufferCapacity);
 
-	private readonly Queue<Node> _challengeQueue = new();
+	private readonly Queue<Node> _challengeQueue = new Queue<Node>();
 
 	public string GetBuffer()
 	{
@@ -125,7 +125,7 @@ public partial class TypingManager : Node
 				return;
 			}
 
-			if (ev.Keycode == Key.Backspace)
+			if (ev.Keycode == KeyList.Backspace)
 			{
 				Backspace();
 			}

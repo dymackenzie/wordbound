@@ -13,7 +13,7 @@ public partial class GameState : Node
     private SaveManager _saveManager;
 
     [Export] public int Seeds { get; private set; } = 0;
-    [Export] public List<string> UnlockedRelics { get; private set; } = [];
+    [Export] public List<string> UnlockedRelics { get; private set; } = new List<string>();
     [Export] public Godot.Collections.Dictionary Conservatory { get; private set; } = new Godot.Collections.Dictionary();
 
     public override void _Ready()
