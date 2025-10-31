@@ -9,19 +9,16 @@ public partial class TypingManager : Node
 	[Signal] public delegate void mistyped(Godot.Collections.Dictionary info);
     [Signal] public delegate void word_completed(string challenge_id, Godot.Collections.Dictionary result);
 
-    // Maximum length of buffer allocated.
     [Export] public int MaxBufferLength { get; set; } = 256;
-
-	// Maximum number of queued challenges. 0 means unlimited.
 	[Export] public int MaxQueueLength { get; set; } = 16;
 
 	private Node _activeChallenge;
 
 	private const int DefaultBufferCapacity = 64;
 
-	private readonly StringBuilder _buffer = new StringBuilder(DefaultBufferCapacity);
+	private readonly StringBuilder _buffer = new(DefaultBufferCapacity);
 
-	private readonly Queue<Node> _challengeQueue = new Queue<Node>();
+	private readonly Queue<Node> _challengeQueue = new();
 
 	public string GetBuffer()
 	{
