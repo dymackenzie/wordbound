@@ -36,6 +36,10 @@ FR-7: The game persists meta-progression (seeds, unlocked relics, conservatory s
 - CombatRoom spawns one Enemy, enters Aura on proximity, shows a TypingChallenge, and allows purification via typing.
 - Seeds counter increments on purification and persists to a simple save file.
 
+- Player can control an avatar that moves around the room, has an Aura, and can activate a kill-aura by pressing Enter when enemies are inside the aura.
+ - Player can control an avatar that moves around the room, has an Aura, and can activate a kill-aura by pressing Enter when enemies are inside the aura.
+ - Activating the kill-zone triggers a short cinematic: the camera smoothly zooms in on the player, global time slows (configurable timescale), and a TypingChallenge is instantiated above the targeted enemy; an Aura timer UI (clockwise arc) starts and letters typed extend the timer. If the aura timer expires the player receives damage and the cinematic ends.
+
 ## 5. System Components & Contracts
 
 Below are the core systems, their responsibilities, public APIs, and signals. Use Godot signals and small method contracts to decouple.
@@ -63,6 +67,53 @@ Below are the core systems, their responsibilities, public APIs, and signals. Us
   - Signals:
     - signal seeds_changed(new_total: int)
 
+5.7 Player (avatar, scene + controller)
+  - Responsibilities: representation of the player avatar in rooms; movement, relic storage and activation of the Aura. The Player node owns a child `Aura` (Area2D) that detects nearby enemies. When enemies are detected the HUD shows an activation prompt; pressing Enter activates the kill-aura or starts the appropriate interaction (typing challenge or immediate purification depending on balance/design).
+  - Public API:
+    - func move(direction: Vector2, delta: float) -> void
+    - func attempt_activate_aura() -> void
+    - func dash() -> void  # upgradeable
+    - func equip_relic(relic_id: String) -> void
+    - func unequip_relic(relic_id: String) -> void
+  - Signals:
+    - signal aura_activation_ready(has_enemies: bool)
+    - signal aura_activated()
+    - signal dashed()
+    - signal relic_equipped(relic_id: String)
+    - signal relic_unequipped(relic_id: String)
+
+  - Implementation notes:
+    - The `Player` scene should be a `CharacterBody2D` (or `KinematicBody2D` in older Godot) with exported movement speed, acceleration and optional gravity if needed for variants.
+    - The player contains a child `Area2D` node named `Aura` with a CollisionShape2D sized to the desired radius. `Aura` tracks bodies that enter/exit and exposes whether activation is allowed.
+    - `attempt_activate_aura()` is called by input (Enter key). If there are enemies in the aura, the game can either (A) instantiate a TypingChallenge for the nearest enemy (preferred for consistency), or (B) perform an immediate purification effect if a relic/upgrade permits instant activation.
+    - `dash()` is an upgradeable ability that performs a short high-speed movement in the current input direction with a short cooldown. Dash can be gated by relics or unlocked via progression.
+    - The player holds a small list/table of equipped relic ids and can serialize/deserialize this via `GameState` for persistence.
+
+5.8 Kill-zone / Cinematic Flow
+  - Purpose: define the UX and implementation contract for the cinematic kill-zone that occurs when the player activates their Aura on nearby enemies.
+  - Trigger:
+    - Player calls `attempt_activate_aura()` (Enter). If `Aura.has_enemies_inside()` is true the CombatRoom chooses a target enemy (nearest or by priority) and begins the kill-zone flow.
+  - Cinematic behaviour:
+    - Camera: smoothly interpolate the active Camera2D zoom toward a configured `KillZoom` centered on the player over `ZoomDuration` seconds.
+    - Time dilation: set `Engine.TimeScale` to a configurable `KillTimeScale` (e.g., 0.2) for the duration of the cinematic. Ensure audio pitch and input remain usable or provide overrides for accessibility.
+    - TypingChallenge placement: instantiate the TypingChallenge above the target enemy. The challenge should be parented to a world-overlay node so it follows the enemy's world position (or use a CanvasLayer with position converted from world to screen coordinates).
+  - Aura timer & visuals:
+    - Start an Aura timer displayed as a clockwise arc (UI) around the player or as a screen HUD element tied to the challenge instance.
+    - The arc decreases smoothly from full to empty over the configured `AuraTimeLimit` unless replenished.
+    - Each correct letter typed awards `LetterTimeBonus` seconds (configurable) added to the remaining aura time, clamped to a `AuraMaxTime` value.
+    - The arc must render clockwise reduction; update frequency should be smooth and visually tied to unscaled time so it feels consistent during slow-mo.
+  - Typing timing during slow-mo:
+    - TypingChallenge countdowns must use unscaled time (OS.GetTicksMsec() or an equivalent real-time source) so the player experiences normal typing responsiveness while the world is slowed.
+  - Success & failure outcomes:
+    - Success: When the TypingChallenge emits `completed`, purify the target enemy, award seeds, play VFX/SFX, stop the cinematic, restore camera zoom and `Engine.TimeScale` to normal, and hide the Aura timer UI.
+    - Failure: If the Aura timer reaches zero before completion, emit `aura_failed`, apply configured damage to the player (or other penalty), end the cinematic, restore camera and time, and cleanup the challenge UI.
+  - Configuration knobs (recommended exports):
+    - KillZoom (Vector2), ZoomDuration (float), KillTimeScale (float), AuraTimeLimit (float), LetterTimeBonus (float), AuraMaxTime (float), DamageOnTimeout (int).
+  - Accessibility and options:
+    - Provide options to reduce or disable cinematic zoom/time-slow for accessibility.
+    - Allow an alternate mode where slow-mo is less extreme but the TypingChallenge still uses unscaled timing.
+
+
 5.2 Combat / Arena
 
 - CombatRoom (scene + controller script)
@@ -78,10 +129,14 @@ Below are the core systems, their responsibilities, public APIs, and signals. Us
   - API:
     - func extend(time: float) -> void
     - func collapse() -> void
+    - func has_enemies_inside() -> bool
+    - func get_enemies_inside() -> Array
   - Signals:
     - signal aura_started()
     - signal aura_failed()
     - signal aura_extended(additional_time: float)
+
+Design note: the Aura component can be used as both a passive detection mechanic (starts a TypingChallenge when enemies enter) and an actively-operated kill-aura triggered by the player pressing Enter. Use configuration flags (e.g., `auto_trigger_on_enter`) to choose behaviour per enemy type or per difficulty.
 
 5.3 Enemy system
 
@@ -196,13 +251,21 @@ Design note: avoid synchronous blocking calls in this chain — use signals so m
 
   CombatRoom (Node2D, script CombatRoom.gd)
   ├─ SpawnPoints (Node2D)
-  ├─ Aura (Area2D, script Aura.gd)
+  ├─ Player (CharacterBody2D, script Player.gd)
+  │   └─ Aura (Area2D, script Aura.gd)
   ├─ EnemyContainer (Node2D)
   └─ HUD (CanvasLayer, scene HUD.tscn)
 
 Implementation notes:
 - Use EnemyContainer to pool/instance enemies.
 - Aura is responsible for slow-time and will call CombatRoom to spawn TypingChallenge UI overlays for enemies in range.
+ - Player movement: the `Player` node moves under player control inside CombatRoom; the `Aura` child on the player detects enemies and coordinates activation prompts. When the player presses Enter and `Aura.has_enemies_inside()` is true, the `Player` should call into `CombatRoom` / `TypingManager` to begin an interaction for one or more enemies.
+
+Implementation notes for Dash upgrade:
+- Dash should be implemented on `Player` as a short, directional impulse with an independent cooldown timer. Expose `DashDistance`, `DashCooldown`, and `DashInvulnerabilityTime` as export variables so relics can modify them. When the player unlocks the dash upgrade, enable input binding (e.g., Shift or a gamepad button) and emit `dashed()` when used.
+
+Upgrade example: unlocking Dash
+- At progression time (from GameState or via an in-game shop), set a player flag `Player.CanDash = true`. Also allow relics to temporarily grant additional dash charges or reduce cooldown.
 
 8.2 Conservatory.tscn (Node2D)
 
