@@ -1,9 +1,6 @@
 using Godot;
 using System;
 
-/// <summary>
-/// SaveManager handles serialization, deserialization and migrations.
-/// </summary>
 public sealed class SaveManager
 {
     private readonly string _savePath;

@@ -2,10 +2,6 @@ using Godot;
 using System;
 using System.Collections.Generic;
 
-/// <summary>
-/// Strongly-typed save model classes and dictionary conversion helpers.
-/// These provide type-safety while remaining compatible with Godot's JSON/Dictionary APIs.
-/// </summary>
 public sealed class SavePayload
 {
     public int Seeds { get; set; } = 0;

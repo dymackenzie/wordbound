@@ -1,9 +1,6 @@
 using Godot;
 using System;
 
-/// <summary>
-/// Simple file repository wrapper to encapsulate disk IO for saves.
-/// </summary>
 public sealed class FileRepository
 {
     public bool Exists(string path)
