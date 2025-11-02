@@ -7,7 +7,7 @@ public partial class TypingManager : Node
 {
 	[Signal] public delegate void CharacterTypedEventHandler(string ch);
 	[Signal] public delegate void MistypedEventHandler(Godot.Collections.Dictionary info);
-	[Signal] public delegate void WordCompletedEventHandler(string challenge_id, Godot.Collections.Dictionary result);
+	[Signal] public delegate void WordCompletedEventHandler(string challengeId, Godot.Collections.Dictionary result);
 
     [Export] public int MaxBufferLength { get; set; } = 256;
 	[Export] public int MaxQueueLength { get; set; } = 16;
@@ -16,9 +16,9 @@ public partial class TypingManager : Node
 
 	private const int DefaultBufferCapacity = 64;
 
-	private readonly StringBuilder _buffer = new StringBuilder(DefaultBufferCapacity);
+	private readonly StringBuilder _buffer = new(DefaultBufferCapacity);
 
-	private readonly Queue<Node> _challengeQueue = new Queue<Node>();
+	private readonly Queue<Node> _challengeQueue = new();
 
 	public string GetBuffer()
 	{
@@ -61,7 +61,8 @@ public partial class TypingManager : Node
 
 		_activeChallenge = _challengeQueue.Dequeue();
 		_buffer.Clear();
-		// May want to emit a signal here to notify UI to focus input.
+		
+		// may want to emit a signal here to notify UI to focus input.
 	}
 
 	public void ClearQueue()
@@ -81,7 +82,7 @@ public partial class TypingManager : Node
         string toAppend = ch;
         if (ch.Length > remaining)
         {
-            toAppend = ch.Substring(0, remaining);
+            toAppend = ch[..remaining];
         }
 
         _buffer.Append(toAppend);
@@ -96,18 +97,18 @@ public partial class TypingManager : Node
 		_buffer.Length = Math.Max(0, _buffer.Length - 1);
 	}
 
-	public void ReportCompletion(string challengeId, Godot.Collections.Dictionary result)
+	public void ReportCompletion(string challengeId, Dictionary<string, object> result)
 	{
 		_activeChallenge = null;
 		_buffer.Clear();
-		EmitSignal(nameof(WordCompleted), challengeId, result);
+		EmitSignal(nameof(WordCompleted), challengeId, Utility.ConvertDictionaryToGodotDictionary(result));
 
 		StartNextChallenge();
 	}
 
-	public void ReportMistyped(Godot.Collections.Dictionary info)
+	public void ReportMistyped(Dictionary<string, object> info)
 	{
-		EmitSignal(nameof(Mistyped), info ?? new Godot.Collections.Dictionary());
+		EmitSignal(nameof(Mistyped), Utility.ConvertDictionaryToGodotDictionary(info ?? []));
 	}
 
 	public override void _UnhandledInput(InputEvent @event)

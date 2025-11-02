@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public partial class GameState : Node
 {
-    [Signal] public delegate void SeedsChangedEventHandler(int new_total);
+    [Signal] public delegate void SeedsChangedEventHandler(int newTotal);
 
     private const int CURRENT_SAVE_VERSION = 1;
     private const string SAVE_PATH = "user://save.json";
@@ -29,7 +29,7 @@ public partial class GameState : Node
         if (amount <= 0)
             return;
         Seeds += amount;
-        EmitSignal("seeds_changed", Seeds);
+        EmitSignal(nameof(SeedsChanged), Seeds);
     }
 
     public bool SpendSeeds(int amount)
@@ -39,7 +39,7 @@ public partial class GameState : Node
         if (Seeds < amount)
             return false;
         Seeds -= amount;
-        EmitSignal("seeds_changed", Seeds);
+        EmitSignal(nameof(SeedsChanged), Seeds);
         return true;
     }
 
@@ -69,6 +69,6 @@ public partial class GameState : Node
         }
         Conservatory = payload?.Conservatory ?? [];
 
-        EmitSignal("seeds_changed", Seeds);
+        EmitSignal(nameof(SeedsChanged), Seeds);
     }
 }
