@@ -2,7 +2,7 @@ using Godot;
 
 public interface ITimeScaleService
 {
-    float Current { get; }
-    void SetScale(float scale);
+    double Current { get; }
+    void SetScale(double scale);
     void Restore();
 }

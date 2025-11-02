@@ -1,5 +1,7 @@
 using Godot;
 using System;
+using System.Collections.Generic;
+using System.Text.Json;
 
 public sealed class SaveManager
 {
@@ -22,23 +24,16 @@ public sealed class SaveManager
         try
         {
             var json = _repo.Load(_savePath);
-            var parse = JSON.ParseString(json);
-            if (parse.Error != Error.Ok)
+            var parse = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+            if (parse == null)
             {
-                GD.PrintErr($"SaveManager.LoadOrDefault: JSON parse error: {parse.ErrorString}");
+                GD.PrintErr($"SaveManager.LoadOrDefault: JSON parse error");
                 return new SavePayload();
             }
 
-            var rootDict = parse.Result as Godot.Collections.Dictionary;
-            if (rootDict == null)
-            {
-                GD.PrintErr("SaveManager.LoadOrDefault: save root is not a Dictionary");
-                return new SavePayload();
-            }
+            int version = parse.ContainsKey("version") ? Convert.ToInt32(parse["version"]) : 1;
 
-            int version = rootDict.Contains("version") ? Convert.ToInt32(rootDict["version"]) : 1;
-
-            var saveRoot = SaveRoot.FromDictionary(rootDict);
+            var saveRoot = SaveRoot.FromDictionary(parse);
             return saveRoot.Payload ?? new SavePayload();
         }
         catch (Exception e)
@@ -54,7 +49,7 @@ public sealed class SaveManager
             Version = _currentVersion,
             Payload = payload ?? new SavePayload()
         };
-        var json = JSON.Print(root.ToDictionary(), pretty: true);
+        var json = JsonSerializer.Serialize(root.ToDictionary(), new JsonSerializerOptions { WriteIndented = true });
         try
         {
             _repo.Save(_savePath, json);

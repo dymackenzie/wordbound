@@ -25,17 +25,6 @@ public sealed class FileRepository
 
     public void WriteTempAndReplace(string path, string tmpPath, string content)
     {
-        using (var outFile = FileAccess.Open(tmpPath, FileAccess.ModeFlags.Write))
-        {
-            outFile.StoreString(content);
-            outFile.Close();
-        }
-
-        if (FileAccess.FileExists(tmpPath))
-        {
-            if (FileAccess.FileExists(path))
-                FileAccess.RemoveFile(path);
-            OS.Move(tmpPath, path);
-        }
+        Save(path, content);
     }
 }

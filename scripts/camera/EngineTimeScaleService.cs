@@ -2,12 +2,12 @@ using Godot;
 
 public sealed class EngineTimeScaleService : ITimeScaleService
 {
-    private float _original = 1f;
+    private double _original = 1.0;
     private bool _hasOriginal = false;
 
-    public float Current => Engine.TimeScale;
+    public double Current => Engine.TimeScale;
 
-    public void SetScale(float scale)
+    public void SetScale(double scale)
     {
         if (!_hasOriginal)
         {

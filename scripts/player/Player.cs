@@ -4,12 +4,12 @@ using System.Collections.Generic;
 
 public partial class Player : CharacterBody2D
 {
-    [Signal] public delegate void aura_activation_ready(bool has_enemies);
-    [Signal] public delegate void aura_activated();
-    [Signal] public delegate void request_kill_zone(Node2D enemy);
-    [Signal] public delegate void dashed();
-    [Signal] public delegate void relic_equipped(string relic_id);
-    [Signal] public delegate void relic_unequipped(string relic_id);
+    [Signal] public delegate void AuraActivationReadyEventHandler(bool has_enemies);
+    [Signal] public delegate void AuraActivatedEventHandler();
+    [Signal] public delegate void RequestKillZoneEventHandler(Node2D enemy);
+    [Signal] public delegate void DashedEventHandler();
+    [Signal] public delegate void RelicEquippedEventHandler(string relic_id);
+    [Signal] public delegate void RelicUnequippedEventHandler(string relic_id);
 
     [Export] public float Speed { get; set; } = 220f;
     [Export] public float DashDistance { get; set; } = 180f;
@@ -18,7 +18,7 @@ public partial class Player : CharacterBody2D
     [Export] public bool CanDash { get; set; } = false;
 
     private Area2D _aura;
-    private readonly List<Node2D> _enemiesInAura = [];
+    private readonly List<Node2D> _enemiesInAura = new List<Node2D>();
 
     private float _lastDashAt = -999f; // seconds (OS ticks)
     private bool _isDashing = false;
@@ -26,7 +26,7 @@ public partial class Player : CharacterBody2D
     private float _dashTimeLeft = 0f;
     private const float _dashDuration = 0.16f;
 
-    private readonly HashSet<string> _equippedRelics = [];
+    private readonly HashSet<string> _equippedRelics = new HashSet<string>();
 
     public override void _Ready()
     {
@@ -65,11 +65,12 @@ public partial class Player : CharacterBody2D
 
     public override void _Input(InputEvent @event)
     {
-        if (_Input.IsActionJustPressed("activate_aura"))
+        // Use the global Input helper so UI can consume/block events as needed
+        if (Input.IsActionJustPressed("activate_aura"))
         {
             AttemptActivateAura();
         }
-        if (_Input.IsActionJustPressed("dash"))
+        if (Input.IsActionJustPressed("dash"))
         {
             Dash();
         }
@@ -81,7 +82,7 @@ public partial class Player : CharacterBody2D
         {
             if (!_enemiesInAura.Contains(n))
                 _enemiesInAura.Add(n);
-            EmitSignal(nameof(aura_activation_ready), true);
+            EmitSignal(nameof(AuraActivationReady), true);
         }
     }
 
@@ -90,7 +91,7 @@ public partial class Player : CharacterBody2D
         if (body is Node2D n)
         {
             _enemiesInAura.Remove(n);
-            EmitSignal(nameof(aura_activation_ready), _enemiesInAura.Count > 0);
+            EmitSignal(nameof(AuraActivationReady), _enemiesInAura.Count > 0);
         }
     }
 
@@ -98,15 +99,15 @@ public partial class Player : CharacterBody2D
     {
         if (_enemiesInAura.Count == 0)
         {
-            EmitSignal(nameof(aura_activation_ready), false);
+            EmitSignal(nameof(AuraActivationReady), false);
             return;
         }
 
         var target = FindNearestEnemy();
         if (target != null)
         {
-            EmitSignal(nameof(aura_activated));
-            EmitSignal(nameof(request_kill_zone), target);
+            EmitSignal(nameof(AuraActivated), target);
+            EmitSignal(nameof(RequestKillZone), target);
         }
     }
 
@@ -132,7 +133,8 @@ public partial class Player : CharacterBody2D
         if (!CanDash)
             return;
 
-        var now = OS.GetTicksMsec() / 1000.0f;
+        // Use UTC time for cooldown timing so we don't depend on Engine/OS tick helpers
+        var now = (float)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
         if (now - _lastDashAt < DashCooldown)
             return;
 
@@ -150,19 +152,19 @@ public partial class Player : CharacterBody2D
         // dash velocity set so the character travels roughly DashDistance over _dashDuration
         _dashVelocity = input * (DashDistance / _dashDuration);
         _lastDashAt = (float)now;
-        EmitSignal(nameof(dashed));
+        EmitSignal(nameof(Dashed));
     }
 
     public void EquipRelic(string relicId)
     {
         if (_equippedRelics.Add(relicId))
-            EmitSignal(nameof(relic_equipped), relicId);
+            EmitSignal(nameof(RelicEquipped), relicId);
     }
 
     public void UnequipRelic(string relicId)
     {
         if (_equippedRelics.Remove(relicId))
-            EmitSignal(nameof(relic_unequipped), relicId);
+            EmitSignal(nameof(RelicUnequipped), relicId);
     }
 
     public IReadOnlyCollection<string> GetEquippedRelics() => _equippedRelics;

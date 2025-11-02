@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 public partial class GameState : Node
 {
-    [Signal] public delegate void seeds_changed(int new_total);
+    [Signal] public delegate void SeedsChangedEventHandler(int new_total);
 
     private const int CURRENT_SAVE_VERSION = 1;
     private const string SAVE_PATH = "user://save.json";
@@ -12,9 +12,9 @@ public partial class GameState : Node
     private FileRepository _fileRepo;
     private SaveManager _saveManager;
 
-    [Export] public int Seeds { get; private set; } = 0;
-    [Export] public List<string> UnlockedRelics { get; private set; } = new List<string>();
-    [Export] public Godot.Collections.Dictionary Conservatory { get; private set; } = new Godot.Collections.Dictionary();
+    public int Seeds { get; private set; } = 0;
+    public List<string> UnlockedRelics { get; private set; } = [];
+    public Dictionary<string, object> Conservatory { get; private set; } = [];
 
     public override void _Ready()
     {
@@ -48,7 +48,7 @@ public partial class GameState : Node
         var payload = new SavePayload
         {
             Seeds = Seeds,
-            UnlockedRelics = new List<string>(UnlockedRelics),
+            UnlockedRelics = UnlockedRelics,
             Conservatory = Conservatory
         };
 
@@ -60,8 +60,14 @@ public partial class GameState : Node
         var payload = _saveManager.LoadOrDefault();
 
         Seeds = payload?.Seeds ?? 0;
-        UnlockedRelics = payload?.UnlockedRelics ?? new List<string>();
-        Conservatory = payload?.Conservatory ?? new Godot.Collections.Dictionary();
+
+        UnlockedRelics.Clear();
+        if (payload?.UnlockedRelics != null)
+        {
+            foreach (var unlockedRelic in payload.UnlockedRelics)
+                UnlockedRelics.Add(unlockedRelic);
+        }
+        Conservatory = payload?.Conservatory ?? [];
 
         EmitSignal("seeds_changed", Seeds);
     }

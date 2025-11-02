@@ -5,9 +5,9 @@ using System.Collections.Generic;
 
 public partial class TypingManager : Node
 {
-	[Signal] public delegate void character_typed(string ch);
-	[Signal] public delegate void mistyped(Godot.Collections.Dictionary info);
-    [Signal] public delegate void word_completed(string challenge_id, Godot.Collections.Dictionary result);
+	[Signal] public delegate void CharacterTypedEventHandler(string ch);
+	[Signal] public delegate void MistypedEventHandler(Godot.Collections.Dictionary info);
+	[Signal] public delegate void WordCompletedEventHandler(string challenge_id, Godot.Collections.Dictionary result);
 
     [Export] public int MaxBufferLength { get; set; } = 256;
 	[Export] public int MaxQueueLength { get; set; } = 16;
@@ -85,7 +85,7 @@ public partial class TypingManager : Node
         }
 
         _buffer.Append(toAppend);
-        EmitSignal("character_typed", toAppend);
+        EmitSignal(nameof(CharacterTyped), toAppend);
     }
 
 	public void Backspace()
@@ -100,14 +100,14 @@ public partial class TypingManager : Node
 	{
 		_activeChallenge = null;
 		_buffer.Clear();
-		EmitSignal("word_completed", challengeId, result);
+		EmitSignal(nameof(WordCompleted), challengeId, result);
 
 		StartNextChallenge();
 	}
 
 	public void ReportMistyped(Godot.Collections.Dictionary info)
 	{
-		EmitSignal("mistyped", info ?? new Godot.Collections.Dictionary());
+		EmitSignal(nameof(Mistyped), info ?? new Godot.Collections.Dictionary());
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
@@ -117,7 +117,7 @@ public partial class TypingManager : Node
 			if (!ev.Pressed || ev.IsEcho())
 				return;
 
-			int codepoint = ev.Unicode;
+			int codepoint = (int)ev.Unicode;
 			if (codepoint != 0)
 			{
 				string ch = char.ConvertFromUtf32(codepoint);
@@ -125,7 +125,7 @@ public partial class TypingManager : Node
 				return;
 			}
 
-			if (ev.Keycode == KeyList.Backspace)
+			if (ev.Keycode == Key.Backspace)
 			{
 				Backspace();
 			}
