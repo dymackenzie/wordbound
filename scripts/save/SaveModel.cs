@@ -21,7 +21,7 @@ public sealed class SavePayload
                 arr.Add(s);
         }
         dict["unlocked_relics"] = arr;
-        dict["conservatory"] = Conservatory ?? new Dictionary<string, object>();
+        dict["conservatory"] = Conservatory ?? [];
         return dict;
     }
 

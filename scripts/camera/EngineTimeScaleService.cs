@@ -1,5 +1,23 @@
 using Godot;
 
+public interface ITimeScaleService
+{
+    /// <summary>
+    /// Get the current engine time scale.
+    /// </summary>
+    double Current { get; }
+
+    /// <summary>
+    /// Set the engine time scale.
+    /// </summary>
+    void SetScale(double scale);
+
+    /// <summary>
+    /// Restore the engine time scale to its original value.
+    /// </summary>
+    void Restore();
+}
+
 public sealed class EngineTimeScaleService : ITimeScaleService
 {
     private double _original = 1.0;

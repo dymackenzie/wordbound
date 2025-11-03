@@ -3,13 +3,33 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 
-public sealed class SaveManager
+public interface ISaveManager
+{
+    /// <summary>
+    /// Load the save payload, or return a default payload if no save exists.
+    /// </summary>
+    SavePayload LoadOrDefault();
+
+    /// <summary>
+    /// Save the given payload.
+    /// Parameters:
+    ///   payload - The save payload to save.
+    /// </summary>
+    void Save(SavePayload payload);
+}
+
+public sealed class SaveManager : ISaveManager
 {
     private readonly string _savePath;
-    private readonly FileRepository _repo;
+    private readonly IFileRepository _repo;
     private readonly int _currentVersion;
 
-    public SaveManager(string savePath, FileRepository repo, int currentVersion)
+    private readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        WriteIndented = true
+    };
+
+    public SaveManager(string savePath, IFileRepository repo, int currentVersion)
     {
         _savePath = savePath;
         _repo = repo ?? throw new ArgumentNullException(nameof(repo));
@@ -45,11 +65,12 @@ public sealed class SaveManager
 
     public void Save(SavePayload payload)
     {
-        var root = new SaveRoot {
+        var root = new SaveRoot
+        {
             Version = _currentVersion,
             Payload = payload ?? new SavePayload()
         };
-        var json = JsonSerializer.Serialize(root.ToDictionary(), new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(root.ToDictionary(), _jsonOptions);
         try
         {
             _repo.Save(_savePath, json);

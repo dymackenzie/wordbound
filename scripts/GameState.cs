@@ -9,7 +9,7 @@ public partial class GameState : Node
     private const int CURRENT_SAVE_VERSION = 1;
     private const string SAVE_PATH = "user://save.json";
 
-    private FileRepository _fileRepo;
+    private IFileRepository _fileRepo;
     private SaveManager _saveManager;
 
     public int Seeds { get; private set; } = 0;

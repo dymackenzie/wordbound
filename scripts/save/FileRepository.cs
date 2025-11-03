@@ -1,7 +1,30 @@
 using Godot;
 using System;
 
-public sealed class FileRepository
+public interface IFileRepository
+{
+    /// <summary>
+    /// Check if a file exists at the given path.
+    /// </summary>
+    bool Exists(string path);
+
+    /// <summary>
+    /// Save JSON content to a file at the given path.
+    /// </summary>
+    void Save(string path, string json);
+
+    /// <summary>
+    /// Load JSON content from a file at the given path.
+    /// </summary>
+    string Load(string path);
+
+    /// <summary>
+    /// Save content to a temporary file and then overwrite the original file.
+    /// </summary>
+    void SaveToFileAndOverwrite(string path, string tmpPath, string content);
+}
+
+public sealed class FileRepository : IFileRepository
 {
     public bool Exists(string path)
     {
@@ -23,8 +46,14 @@ public sealed class FileRepository
         return txt;
     }
 
-    public void WriteTempAndReplace(string path, string tmpPath, string content)
+    public void SaveToFileAndOverwrite(string path, string tmpPath, string content)
     {
-        Save(path, content);
+        Save(tmpPath, content);
+
+        if (FileAccess.FileExists(path))
+        {
+            DirAccess.RemoveAbsolute(path);
+        }
+        DirAccess.RenameAbsolute(tmpPath, path);
     }
 }

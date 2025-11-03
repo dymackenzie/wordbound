@@ -6,3 +6,10 @@
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("1_xgxow")
+DisplayLabelPath = NodePath("RichTextLabel")
+
+[node name="RichTextLabel" type="RichTextLabel" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+horizontal_alignment = 1

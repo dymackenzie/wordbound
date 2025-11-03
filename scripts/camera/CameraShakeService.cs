@@ -1,6 +1,34 @@
 using Godot;
 using System;
 
+public interface ICameraShakeService
+{
+    /// <summary>
+    /// Update the camera shake effect.
+    /// Parameters:
+    ///  - delta: time elapsed since last update (seconds)
+    /// </summary>
+    void Update(double delta);
+
+    /// <summary>
+    /// Get the current shake offset.
+    /// </summary>
+    Vector2 CurrentOffset { get; }
+
+    /// <summary>
+    /// Trigger a camera shake effect.
+    /// Parameters:
+    ///  - duration: how long the shake lasts (seconds)
+    ///  - magnitude: the intensity of the shake
+    /// </summary>
+    void Shake(double duration, float magnitude);
+
+    /// <summary>
+    /// Reset the camera shake effect.
+    /// </summary>
+    void Reset();
+}
+
 public sealed class CameraShakeService : ICameraShakeService
 {
     private double _timeLeft = 0.0;
