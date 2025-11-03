@@ -1,6 +1,6 @@
-## Garden of Words — Godot 2D Development Roadmap
+## Wordbound — Godot 2D Development Roadmap
 
-This document is a pragmatic, step-by-step engineering roadmap to turn the "Garden of Words" concept into a modular, maintainable Godot 4 2D game. It focuses on high cohesion, low coupling, modularity, and making classes and systems open to extension.
+This document is a pragmatic, step-by-step engineering roadmap to turn the "Wordbound" concept into a modular, maintainable Godot 4 2D game. It focuses on high cohesion, low coupling, modularity, and making classes and systems open to extension.
 
 ---
 

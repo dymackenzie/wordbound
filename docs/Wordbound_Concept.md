@@ -1,4 +1,4 @@
-# 🌿 Garden of Words — Refined Roguelike Concept
+# 🌿 Wordbound — Refined Roguelike Concept
 
 ## ⚙️ Core Identity
 A roguelike typing action game about **clearing corruption and restoring balance**, where typing words is both **combat** and **creation**. The faster and more accurately you type, the more beauty you return to the world.

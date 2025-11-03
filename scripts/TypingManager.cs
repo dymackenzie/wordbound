@@ -25,6 +25,14 @@ public partial class TypingManager : Node
 		return _buffer.ToString();
 	}
 
+	public string GetLastTypedCharacter()
+	{
+		if (_buffer.Length == 0)
+			return string.Empty;
+
+		return _buffer[^1].ToString();
+	}
+
 	public void QueueChallenge(Node challenge)
 	{
 		if (challenge == null)

@@ -67,15 +67,13 @@ public partial class CameraController : Camera2D
         }));
     }
 
-    public void Shake(double duration = 0, float magnitude = 0f)
+    public void Shake(double duration, float magnitude)
     {
-        duration = duration > 0 ? duration : ShakeDuration;
-        magnitude = magnitude > 0 ? magnitude : ShakeMagnitude;
         _shakeService?.Shake(duration, magnitude);
     }
 
     public void OnCharacterTyped(string ch)
     {
-        _shakeService?.Shake(0.08, 3f);
+        _shakeService?.Shake(ShakeDuration, ShakeMagnitude);
     }
 }

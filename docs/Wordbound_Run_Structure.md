@@ -1,4 +1,4 @@
-# 🌿 Garden of Words — Single Run Flow
+# 🌿 Wordbound — Single Run Flow
 
 ## 🌀 Overview
 Each run represents your spirit’s descent into a corrupted region of the garden.  

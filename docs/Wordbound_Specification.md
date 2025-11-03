@@ -1,4 +1,4 @@
-# Garden of Words — Game Specification
+# Wordbound — Game Specification
 
 This specification consolidates the design and engineering guidance from the concept and roadmap docs into a single actionable reference for development. It focuses on functional requirements, non-functional requirements, system interfaces, scene and node layouts, resource formats, and a concise test plan.
 
