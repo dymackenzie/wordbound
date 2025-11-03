@@ -1,5 +1,8 @@
-[gd_scene format=3 uid="uid://k1rekyttkaeq"]
+[gd_scene load_steps=2 format=3 uid="uid://k1rekyttkaeq"]
+
+[ext_resource type="Script" uid="uid://bqg7cjom04gga" path="res://scripts/typing/TypingChallenge.cs" id="1_xgxow"]
 
 [node name="TypingChallenge" type="Control"]
 layout_mode = 3
 anchors_preset = 0
+script = ExtResource("1_xgxow")

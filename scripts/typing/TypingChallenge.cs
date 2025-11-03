@@ -15,9 +15,9 @@ public partial class TypingChallenge : Control
 	[Export] public double InvalidDisplayMs { get; set; } = 300.0;
 	[Export] public double LetterTimeBonusSeconds { get; set; } = 0.5;
 	[Export] public double MaxRemainingSeconds { get; set; } = 12.0;
-	[Export] public string CorrectColor { get; set; } = "#00ff66";
-	[Export] public string IncorrectColor { get; set; } = "#ff4444";
-	[Export] public string RemainingColor { get; set; } = "#888888";
+	[Export] public Color CorrectColor { get; set; } = new Color("#00ff66");
+	[Export] public Color IncorrectColor { get; set; } = new Color("#ff4444");
+	[Export] public Color RemainingColor { get; set; } = new Color("#888888");
 
 	private string _challengeId = "";
 	private string _text = "";
@@ -266,7 +266,7 @@ public partial class TypingChallenge : Control
 			// correct prefix
 			if (_position > 0)
 			{
-				_displayLabel.PushColor(Utility.ParseColor(CorrectColor));
+				_displayLabel.PushColor(CorrectColor);
 				_displayLabel.AddText(_text[.._position]);
 				_displayLabel.Pop();
 			}
@@ -276,7 +276,7 @@ public partial class TypingChallenge : Control
 			bool showInvalid = !string.IsNullOrEmpty(_lastInvalidChar) && (now - _lastInvalidTick) <= (ulong)InvalidDisplayMs;
 			if (showInvalid)
 			{
-				_displayLabel.PushColor(Utility.ParseColor(IncorrectColor));
+				_displayLabel.PushColor(IncorrectColor);
 				_displayLabel.AddText(_lastInvalidChar);
 				_displayLabel.Pop();
 			}
@@ -285,7 +285,7 @@ public partial class TypingChallenge : Control
 			int remStart = _position + (showInvalid ? 1 : 0);
 			if (remStart < _text.Length)
 			{
-				_displayLabel.PushColor(Utility.ParseColor(RemainingColor));
+				_displayLabel.PushColor(RemainingColor);
 				_displayLabel.AddText(_text[remStart..]);
 				_displayLabel.Pop();
 			}

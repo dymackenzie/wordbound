@@ -24,6 +24,8 @@ public partial class CameraController : Camera2D
         _timeService ??= new EngineTimeScaleService();
         _originalZoom = Zoom;
         _shakeService ??= new CameraShakeService();
+
+        ConnectToManager();
     }
 
     private void ConnectToManager()
