@@ -116,9 +116,10 @@ public partial class TypingChallenge : Control
             _deadlineTicks = _timeBonusPolicy.ApplyBonus(_deadlineTicks, now, LetterTimeBonusSeconds, MaxRemainingSeconds);
             
 			_correctCharCount++;
-			_wpm = _wpmCalculator.CalculateWpm(_correctCharCount, _startTicks, now);
+            _wpm = _wpmCalculator.CalculateWpm(_correctCharCount, _startTicks, now);
 
 			// notify listeners
+            _typingManager?.NotifyCharacterCorrect(ch);
 			EmitSignal(nameof(WpmUpdated), _wpm);
 			EmitSignal(nameof(CharacterCorrect), ch);
 			EmitSignal(nameof(Progress), _challengeId, _text[.._position], RemainingTimeSeconds());

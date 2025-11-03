@@ -26,6 +26,12 @@ public partial class CameraController : Camera2D
         _shakeService ??= new CameraShakeService();
     }
 
+    private void ConnectToManager()
+    {
+        var typingManager = GetNodeOrNull<TypingManager>("/root/TypingManager");
+        typingManager?.Connect("CharacterCorrect", new Callable(this, nameof(Shake)));
+    }
+
     public void SetTarget(Node2D target)
     {
         _target = target;
@@ -70,10 +76,5 @@ public partial class CameraController : Camera2D
     public void Shake(double duration, float magnitude)
     {
         _shakeService?.Shake(duration, magnitude);
-    }
-
-    public void OnCharacterTyped(string ch)
-    {
-        _shakeService?.Shake(ShakeDuration, ShakeMagnitude);
     }
 }

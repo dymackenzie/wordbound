@@ -6,6 +6,7 @@ using System.Collections.Generic;
 public partial class TypingManager : Node
 {
 	[Signal] public delegate void CharacterTypedEventHandler(string ch);
+	[Signal] public delegate void CharacterCorrectEventHandler(string ch);
 	[Signal] public delegate void MistypedEventHandler(Godot.Collections.Dictionary info);
 	[Signal] public delegate void WordCompletedEventHandler(string challengeId, Godot.Collections.Dictionary result);
 
@@ -117,6 +118,11 @@ public partial class TypingManager : Node
 	public void ReportMistyped(Dictionary<string, object> info)
 	{
 		EmitSignal(nameof(Mistyped), Utility.ConvertDictionaryToGodotDictionary(info ?? []));
+	}
+
+	public void NotifyCharacterCorrect(string ch)
+	{
+		EmitSignal(nameof(CharacterCorrect), ch);
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
