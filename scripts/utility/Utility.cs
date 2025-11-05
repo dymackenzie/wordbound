@@ -15,4 +15,13 @@ public static class Utility
         }
         return gdDict;
     }
+
+    public static string ReverseString(string s)
+    {
+        if (string.IsNullOrEmpty(s))
+            return s;
+        var arr = s.ToCharArray();
+        Array.Reverse(arr);
+        return new string(arr);
+    }
 }

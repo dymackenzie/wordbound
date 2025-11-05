@@ -54,7 +54,6 @@ public partial class Player : CharacterBody2D
 
     public override void _Input(InputEvent @event)
     {
-        // use the global Input helper so UI can consume/block events as needed
         if (Input.IsActionJustPressed("activate_aura"))
         {
             EmitSignal(nameof(AuraActivated));
