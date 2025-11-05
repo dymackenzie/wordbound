@@ -27,13 +27,13 @@ public partial class EnemyBase : CharacterBody2D
     private float _orbitTimer = 0f;
     private float _attackTimer = 0f;
 
-    private enum EnemyState
-    {
-        Surround,
-        Orbit,
-        Approach
-    }
-	private EnemyState _state = EnemyState.Surround;
+	protected enum EnemyState
+	{
+		Surround,
+		Orbit,
+		Approach
+	}
+	protected EnemyState _state = EnemyState.Surround;
 
     public override void _Ready()
     {
