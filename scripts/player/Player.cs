@@ -4,12 +4,10 @@ using System.Collections.Generic;
 
 public partial class Player : CharacterBody2D
 {
-    [Signal] public delegate void AuraActivationReadyEventHandler(bool has_enemies);
     [Signal] public delegate void AuraActivatedEventHandler();
-    [Signal] public delegate void RequestKillZoneEventHandler(Node2D enemy);
     [Signal] public delegate void DashedEventHandler();
-    [Signal] public delegate void RelicEquippedEventHandler(string relic_id);
-    [Signal] public delegate void RelicUnequippedEventHandler(string relic_id);
+    [Signal] public delegate void RelicEquippedEventHandler(string relicId);
+    [Signal] public delegate void RelicUnequippedEventHandler(string relicId);
 
     [Export] public float Speed { get; set; } = 220f;
     [Export] public float DashDistance { get; set; } = 180f;
@@ -17,26 +15,17 @@ public partial class Player : CharacterBody2D
     [Export] public float DashInvulnerabilityTime { get; set; } = 0.12f;
     [Export] public bool CanDash { get; set; } = false;
 
-    private Area2D _aura;
-    private readonly List<Node2D> _enemiesInAura = new List<Node2D>();
-
     private float _lastDashAt = -999f; // seconds (OS ticks)
     private bool _isDashing = false;
     private Vector2 _dashVelocity = Vector2.Zero;
     private float _dashTimeLeft = 0f;
     private const float _dashDuration = 0.16f;
 
-    private readonly HashSet<string> _equippedRelics = new HashSet<string>();
+    private readonly HashSet<string> _equippedRelics = [];
 
     public override void _Ready()
     {
-        // find Aura child
-        _aura = GetNodeOrNull<Area2D>("Aura");
-        if (_aura != null)
-        {
-            _aura.BodyEntered += OnAuraBodyEntered;
-            _aura.BodyExited += OnAuraBodyExited;
-        }
+        
     }
 
     public override void _PhysicsProcess(double delta)
@@ -65,10 +54,10 @@ public partial class Player : CharacterBody2D
 
     public override void _Input(InputEvent @event)
     {
-        // Use the global Input helper so UI can consume/block events as needed
+        // use the global Input helper so UI can consume/block events as needed
         if (Input.IsActionJustPressed("activate_aura"))
         {
-            AttemptActivateAura();
+            EmitSignal(nameof(AuraActivated));
         }
         if (Input.IsActionJustPressed("dash"))
         {
@@ -76,64 +65,12 @@ public partial class Player : CharacterBody2D
         }
     }
 
-    private void OnAuraBodyEntered(Node body)
-    {
-        if (body is Node2D n)
-        {
-            if (!_enemiesInAura.Contains(n))
-                _enemiesInAura.Add(n);
-            EmitSignal(nameof(AuraActivationReady), true);
-        }
-    }
-
-    private void OnAuraBodyExited(Node body)
-    {
-        if (body is Node2D n)
-        {
-            _enemiesInAura.Remove(n);
-            EmitSignal(nameof(AuraActivationReady), _enemiesInAura.Count > 0);
-        }
-    }
-
-    public void AttemptActivateAura()
-    {
-        if (_enemiesInAura.Count == 0)
-        {
-            EmitSignal(nameof(AuraActivationReady), false);
-            return;
-        }
-
-        var target = FindNearestEnemy();
-        if (target != null)
-        {
-            EmitSignal(nameof(AuraActivated), target);
-            EmitSignal(nameof(RequestKillZone), target);
-        }
-    }
-
-    private Node2D FindNearestEnemy()
-    {
-        Node2D best = null;
-        float bestDist = float.MaxValue;
-        foreach (var enemy in _enemiesInAura)
-        {
-            if (enemy == null) continue;
-            var enemyDistance = enemy.GlobalPosition.DistanceTo(GlobalPosition);
-            if (enemyDistance < bestDist)
-            {
-                bestDist = enemyDistance;
-                best = enemy;
-            }
-        }
-        return best;
-    }
-
     public void Dash()
     {
         if (!CanDash)
             return;
 
-        // Use UTC time for cooldown timing so we don't depend on Engine/OS tick helpers
+        // use UTC time for cooldown timing so we don't depend on Engine/OS tick helpers
         var now = (float)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
         if (now - _lastDashAt < DashCooldown)
             return;
@@ -151,7 +88,7 @@ public partial class Player : CharacterBody2D
         _dashTimeLeft = _dashDuration;
         // dash velocity set so the character travels roughly DashDistance over _dashDuration
         _dashVelocity = input * (DashDistance / _dashDuration);
-        _lastDashAt = (float)now;
+        _lastDashAt = now;
         EmitSignal(nameof(Dashed));
     }
 

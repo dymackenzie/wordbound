@@ -6,12 +6,10 @@ public partial class TypingChallenge : Control
 {
 	[Signal] public delegate void ProgressEventHandler(string challengeId, string typed, double remainingTime);
 	[Signal] public delegate void FailedEventHandler(string challengeId, string reason);
-	[Signal] public delegate void CharacterCorrectEventHandler(string ch);
-	[Signal] public delegate void CharacterInvalidEventHandler(string ch);
-	[Signal] public delegate void WpmUpdatedEventHandler(double wpm);
+	[Signal] public delegate void CompletedEventHandler(string challengeId, string finalBuffer, double timeLeft);
 
 	[Export] public NodePath DisplayLabelPath { get; set; } = new NodePath();
-	[Export] public double ProgressEmitIntervalMs { get; set; } = 100.0;
+	[Export] public double ProgressEmitIntervalMs { get; set; } = 50.0;
 	[Export] public double InvalidDisplayMs { get; set; } = 300.0;
 	[Export] public double LetterTimeBonusSeconds { get; set; } = 0.5;
 	[Export] public double MaxRemainingSeconds { get; set; } = 12.0;
@@ -21,6 +19,7 @@ public partial class TypingChallenge : Control
 
 	private string _challengeId = "";
 	private string _text = "";
+	private double _timeLimitSeconds;
 	private bool _running = false;
 	private ulong _deadlineTicks = 0;
 	private ulong _lastProgressEmitTicks = 0;
@@ -31,14 +30,14 @@ public partial class TypingChallenge : Control
 
 	private ulong _startTicks = 0;
 	private int _correctCharCount = 0;
-    private double _wpm = 0.0;
-    
+	private double _wpm = 0.0;
+
 	private IWpmCalculator _wpmCalculator;
 	private ITimeBonusPolicy _timeBonusPolicy;
 	private TypingManager _typingManager;
 	private RichTextLabel _displayLabel;
 
-	public override void _Ready() {}
+	public override void _Ready() { }
 
 	public override void _Process(double delta)
 	{
@@ -58,14 +57,11 @@ public partial class TypingChallenge : Control
 		}
 	}
 
-	/// <summary>
-	/// NOTE: must be called before challenge is queued with TypingManager.QueueChallenge.
-	/// </summary>
-	public void Start(string challengeId, string text, double timeLimitSeconds)
+	private void Start(string challengeId, string text, double timeLimitSeconds)
 	{
-        if (string.IsNullOrEmpty(challengeId))
-            throw new ArgumentException("challengeId required", nameof(challengeId));
-        
+		if (string.IsNullOrEmpty(challengeId))
+			throw new ArgumentException("challengeId required", nameof(challengeId));
+
 		_challengeId = challengeId;
 		_text = text ?? "";
 
@@ -82,29 +78,58 @@ public partial class TypingChallenge : Control
 		_timeBonusPolicy = new DefaultTimeBonusPolicy();
 		_lastProgressEmitTicks = now;
 		_running = true;
+		Visible = true;
 
 		ConnectToDisplayLabel();
 		ConnectToManager();
 		EmitProgress();
 	}
 
-    public void Cancel()
-    {
-        if (!_running)
-            return;
+	/// <summary>
+    /// Prepares the typing challenge with the given parameters.
+    /// </summary>
+	public void Prepare(string challengeId, string text, double timeLimitSeconds)
+	{
+		_challengeId = challengeId ?? "";
+		_text = text ?? "";
+		_timeLimitSeconds = timeLimitSeconds;
+		_running = false;
+		_deadlineTicks = 0;
+		Visible = false;
+	}
 
-        DisconnectFromManager();
-        _running = false;
-        EmitSignal(nameof(Failed), _challengeId, "cancelled");
-    }
+	/// <summary>
+	/// Starts the prepared typing challenge.
+	/// </summary>
+	public void ActivateQueued()
+	{
+		if (_running)
+			return;
 
-    private void OnCharacterTyped(string ch)
-    {
-        if (!_running)
-            return;
-            
-        if (string.IsNullOrEmpty(ch)) 
-            return;
+		if (string.IsNullOrEmpty(_challengeId))
+		{
+			GD.PrintErr("TypingChallenge: ActivateQueued called but no prepared challengeId was set. Call Prepare(...) first.");
+			return;
+		}
+
+		Start(_challengeId, _text, _timeLimitSeconds);
+	}
+
+	/// <summary>
+	/// Cancels the current typing challenge.
+	/// </summary>
+	public void Cancel()
+	{
+		Fail("cancelled");
+	}
+
+	private void OnCharacterTyped(string ch)
+	{
+		if (!_running)
+			return;
+
+		if (string.IsNullOrEmpty(ch))
+			return;
 
 		ulong now = Time.GetTicksMsec();
 
@@ -112,16 +137,14 @@ public partial class TypingChallenge : Control
 		{
 			_position++;
 
-            // apply time bonus
-            _deadlineTicks = _timeBonusPolicy.ApplyBonus(_deadlineTicks, now, LetterTimeBonusSeconds, MaxRemainingSeconds);
-            
+			// apply time bonus
+			_deadlineTicks = _timeBonusPolicy.ApplyBonus(_deadlineTicks, now, LetterTimeBonusSeconds, MaxRemainingSeconds);
+
 			_correctCharCount++;
-            _wpm = _wpmCalculator.CalculateWpm(_correctCharCount, _startTicks, now);
+			_wpm = _wpmCalculator.CalculateWpm(_correctCharCount, _startTicks, now);
 
 			// notify listeners
-            _typingManager?.NotifyCharacterCorrect(ch);
-			EmitSignal(nameof(WpmUpdated), _wpm);
-			EmitSignal(nameof(CharacterCorrect), ch);
+			_typingManager?.NotifyCharacterCorrect(ch);
 			EmitSignal(nameof(Progress), _challengeId, _text[.._position], RemainingTimeSeconds());
 			UpdateDisplay();
 
@@ -130,139 +153,133 @@ public partial class TypingChallenge : Control
 				Complete(_text);
 			}
 		}
-        else
-        {
-            // invalid char: flash it and notify TypingManager and listeners
-            _lastInvalidChar = ch;
-            _lastInvalidTick = Time.GetTicksMsec();
-            try
-            {
-                _typingManager?.ReportMistyped(new Dictionary<string, object> {
-                    ["challenge_id"] = _challengeId,
-                    ["typed"] = ch,
-                    ["expected"] = _position < _text.Length ? _text[_position].ToString() : ""
-                });
-            }
-            catch
-            {
-                GD.PrintErr("Error reporting mistyped character");
-            }
-            UpdateDisplay();
-        }
-    }
+		else
+		{
+			// invalid char: flash it and notify TypingManager and listeners
+			_lastInvalidChar = ch;
+			_lastInvalidTick = Time.GetTicksMsec();
+			_typingManager?.ReportMistyped(new Dictionary<string, object>
+			{
+				["challenge_id"] = _challengeId,
+				["typed"] = ch,
+				["expected"] = _position < _text.Length ? _text[_position].ToString() : ""
+			});
+			UpdateDisplay();
+		}
+	}
 
 	private void Complete(string finalBuffer)
 	{
-        if (!_running)
-            return;
-            
-		double accuracy = 1.0;
-        double timeLeft = RemainingTimeSeconds();
-        bool hasHalfTimeLeft = timeLeft >= (MaxRemainingSeconds * 0.5);
-        
-        try
-        {
-            _typingManager?.ReportCompletion(_challengeId, new Dictionary<string, object> {
-                ["typed"] = finalBuffer,
-                ["accuracy"] = accuracy,
-                ["wpm"] = _wpm,
-                ["time_left"] = timeLeft,
-                ["has_half_time_left"] = hasHalfTimeLeft
-            });
-        }
-        catch
-        {
-            GD.PrintErr("Error reporting completion");
-        }
+		if (!_running)
+			return;
+
+		double accuracy = AccuracyCalculator.ComputeAccuracy(_text, _typingManager.GetBuffer() ?? "");
+		double timeLeft = RemainingTimeSeconds();
+
+		// Emit Completed for UI or visual listeners
+		EmitSignal(nameof(Completed), _challengeId, finalBuffer, timeLeft);
+
+
+		_typingManager?.ReportCompletion(_challengeId, new Dictionary<string, object>
+		{
+			["typed"] = finalBuffer,
+			["expected"] = _text,
+			["accuracy"] = accuracy,
+			["wpm"] = _wpm,
+			["time_left"] = timeLeft,
+			["has_half_time_left"] = timeLeft >= (MaxRemainingSeconds * 0.5)
+		});
 
 		DisconnectFromManager();
 		_running = false;
+		Visible = false;
 	}
 
 	private void Fail(string reason)
 	{
-        if (!_running)
-            return;
-            
+		if (!_running)
+			return;
+
 		EmitSignal(nameof(Failed), _challengeId, reason);
+		_typingManager?.ReportIncompletion(_challengeId);
 		DisconnectFromManager();
 		_running = false;
 	}
 
 	private void EmitProgress()
 	{
-        if (!_running)
-            return;
-            
+		if (!_running)
+			return;
+
 		string prefix = _text[..Math.Min(_position, _text.Length)];
 		EmitSignal(nameof(Progress), _challengeId, prefix, RemainingTimeSeconds());
 		UpdateDisplay();
 	}
 
-    private double RemainingTimeSeconds()
-    {
-        if (!_running)
-            return 0.0;
-            
-        ulong now = Time.GetTicksMsec();
-        if (now >= _deadlineTicks)
-            return 0.0;
-            
-        return (_deadlineTicks - now) / 1000.0;
-    }
+	private double RemainingTimeSeconds()
+	{
+		if (!_running)
+			return 0.0;
 
-    private void ConnectToDisplayLabel()
-    {
-        if (!string.IsNullOrEmpty(DisplayLabelPath.ToString()))
-        {
-            _displayLabel = GetNodeOrNull<RichTextLabel>(DisplayLabelPath);
-            if (_displayLabel != null) 
-                _displayLabel.BbcodeEnabled = true;
-        }
-        else
-        {
-            GD.PrintErr("DisplayLabelPath is null or empty");
-        }
-    }
-    
-    private void ConnectToManager()
-    {
-        _typingManager = GetNodeOrNull<TypingManager>("/root/TypingManager");
+		ulong now = Time.GetTicksMsec();
+		if (now >= _deadlineTicks)
+			return 0.0;
+
+		return (_deadlineTicks - now) / 1000.0;
+	}
+
+	private void ConnectToDisplayLabel()
+	{
+		if (!string.IsNullOrEmpty(DisplayLabelPath.ToString()))
+		{
+			_displayLabel = GetNodeOrNull<RichTextLabel>(DisplayLabelPath);
+			if (_displayLabel != null)
+				_displayLabel.BbcodeEnabled = true;
+		}
+		else
+		{
+			throw new ArgumentException("DisplayLabelPath is not set", nameof(DisplayLabelPath));
+		}
+	}
+
+	private void ConnectToManager()
+	{
+		_typingManager = GetNodeOrNull<TypingManager>("/root/TypingManager");
 		if (_typingManager != null)
 		{
-            try
-            {
-                _typingManager.Connect("CharacterTyped", new Callable(this, nameof(OnCharacterTyped)));
-            }
-            catch
-            {
-                GD.PrintErr("Error connecting to TypingManager CharacterTyped signal");
-            }
+			try
+			{
+				_typingManager.Connect("CharacterTyped", new Callable(this, nameof(OnCharacterTyped)));
+			}
+			catch
+			{
+				GD.PrintErr("Error connecting to TypingManager CharacterTyped signal");
+			}
 		}
-    }
+	}
 
 	private void DisconnectFromManager()
 	{
 		if (_typingManager == null) return;
-        try
-        {
-            _typingManager.Disconnect("CharacterTyped", new Callable(this, nameof(OnCharacterTyped)));
-        }
-        catch
-        {
-            GD.PrintErr("Error disconnecting from TypingManager CharacterTyped signal");
-         }
+		try
+		{
+			_typingManager.Disconnect("CharacterTyped", new Callable(this, nameof(OnCharacterTyped)));
+		}
+		catch
+		{
+			GD.PrintErr("Error disconnecting from TypingManager CharacterTyped signal");
+		}
 	}
 
 	private void UpdateDisplay()
 	{
-        if (_displayLabel == null)
-            return;
-            
+		if (_displayLabel == null)
+			return;
+
 		try
 		{
-            _displayLabel.Clear();
-            
+			_displayLabel.Clear();
+
 			// correct prefix
 			if (_position > 0)
 			{
@@ -292,7 +309,7 @@ public partial class TypingChallenge : Control
 		}
 		catch
 		{
-            _displayLabel.Text = _text;
+			_displayLabel.Text = _text;
 		}
 	}
 

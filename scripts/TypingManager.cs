@@ -9,17 +9,12 @@ public partial class TypingManager : Node
 	[Signal] public delegate void CharacterCorrectEventHandler(string ch);
 	[Signal] public delegate void MistypedEventHandler(Godot.Collections.Dictionary info);
 	[Signal] public delegate void WordCompletedEventHandler(string challengeId, Godot.Collections.Dictionary result);
+	[Signal] public delegate void WordIncompleteEventHandler(string challengeId);
 
-    [Export] public int MaxBufferLength { get; set; } = 256;
-	[Export] public int MaxQueueLength { get; set; } = 16;
-
-	private Node _activeChallenge;
+	[Export] public int MaxBufferLength { get; set; } = 256;
 
 	private const int DefaultBufferCapacity = 64;
-
 	private readonly StringBuilder _buffer = new(DefaultBufferCapacity);
-
-	private readonly Queue<Node> _challengeQueue = new();
 
 	public string GetBuffer()
 	{
@@ -29,54 +24,14 @@ public partial class TypingManager : Node
 	public string GetLastTypedCharacter()
 	{
 		if (_buffer.Length == 0)
-			return string.Empty;
+			return "";
 
 		return _buffer[^1].ToString();
 	}
 
-	public void QueueChallenge(Node challenge)
+	public void ClearBuffer()
 	{
-		if (challenge == null)
-			return;
-
-		if (MaxQueueLength > 0 && _challengeQueue.Count >= MaxQueueLength)
-		{
-			GD.PrintErr($"TypingManager: queue full (MaxQueueLength={MaxQueueLength}), ignoring new challenge");
-			return;
-		}
-
-		_challengeQueue.Enqueue(challenge);
-
-		if (!HasActiveChallenge())
-		{
-			StartNextChallenge();
-		}
-	}
-
-	public void CancelChallenge()
-	{
-		_activeChallenge = null;
 		_buffer.Clear();
-	}
-
-	private void StartNextChallenge()
-	{
-		if (_challengeQueue.Count == 0)
-		{
-			_activeChallenge = null;
-			_buffer.Clear();
-			return;
-		}
-
-		_activeChallenge = _challengeQueue.Dequeue();
-		_buffer.Clear();
-		
-		// may want to emit a signal here to notify UI to focus input.
-	}
-
-	public void ClearQueue()
-	{
-		_challengeQueue.Clear();
 	}
 
 	public void AddCharacter(string ch)
@@ -108,16 +63,22 @@ public partial class TypingManager : Node
 
 	public void ReportCompletion(string challengeId, Dictionary<string, object> result)
 	{
-		_activeChallenge = null;
+		if (result == null)
+			result = new Dictionary<string, object>();
+
 		_buffer.Clear();
 		EmitSignal(nameof(WordCompleted), challengeId, Utility.ConvertDictionaryToGodotDictionary(result));
-
-		StartNextChallenge();
 	}
 
 	public void ReportMistyped(Dictionary<string, object> info)
 	{
 		EmitSignal(nameof(Mistyped), Utility.ConvertDictionaryToGodotDictionary(info ?? []));
+	}
+
+	public void ReportIncompletion(string challengeId)
+	{
+		_buffer.Clear();
+		EmitSignal(nameof(WordIncomplete), challengeId);
 	}
 
 	public void NotifyCharacterCorrect(string ch)
@@ -145,11 +106,6 @@ public partial class TypingManager : Node
 				Backspace();
 			}
 		}
-	}
-
-	public bool HasActiveChallenge()
-	{
-		return _activeChallenge != null;
 	}
 }
 

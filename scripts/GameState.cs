@@ -24,6 +24,9 @@ public partial class GameState : Node
         Load();
     }
 
+    /// <summary>
+    /// Adds the given amount of seeds to the player's total.
+    /// </summary>
     public void AddSeeds(int amount)
     {
         if (amount <= 0)
@@ -32,6 +35,9 @@ public partial class GameState : Node
         EmitSignal(nameof(SeedsChanged), Seeds);
     }
 
+    /// <summary>
+    /// Attempts to spend the given amount of seeds.
+    /// </summary>
     public bool SpendSeeds(int amount)
     {
         if (amount <= 0)
@@ -43,6 +49,9 @@ public partial class GameState : Node
         return true;
     }
 
+    /// <summary>
+    /// Saves the current game state.
+    /// </summary>
     public void Save()
     {
         var payload = new SavePayload
@@ -55,6 +64,9 @@ public partial class GameState : Node
         _saveManager.Save(payload);
     }
 
+    /// <summary>
+    /// Loads the game state from the save file.
+    /// </summary>
     public void Load()
     {
         var payload = _saveManager.LoadOrDefault();

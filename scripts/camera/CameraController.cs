@@ -34,6 +34,9 @@ public partial class CameraController : Camera2D
         typingManager?.Connect("CharacterCorrect", new Callable(this, nameof(Shake)));
     }
 
+    /// <summary>
+    /// Sets the target Node2D for the camera to follow.
+    /// </summary>
     public void SetTarget(Node2D target)
     {
         _target = target;
@@ -48,6 +51,9 @@ public partial class CameraController : Camera2D
         _shakeService.Update(delta);
     }
 
+    /// <summary>
+    /// Starts the kill cinematic effect.
+    /// </summary>
     public void StartKillCinematic()
     {
         if (_isInCinematic) return;
@@ -57,11 +63,15 @@ public partial class CameraController : Camera2D
         EmitSignal(nameof(CinematicStarted));
         var tween = CreateTween();
         tween.TweenProperty(this, "zoom", KillZoom, ZoomDuration).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
-        tween.TweenCallback(Callable.From(() => {
+        tween.TweenCallback(Callable.From(() =>
+        {
             // just in case we need this
         }));
     }
 
+    /// <summary>
+    /// Ends the kill cinematic effect.
+    /// </summary>
     public void EndKillCinematic()
     {
         if (!_isInCinematic) return;
