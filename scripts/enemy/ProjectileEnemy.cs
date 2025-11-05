@@ -4,6 +4,7 @@ using System;
 public partial class ProjectileEnemy : EnemyBase
 {
     [Export] public PackedScene ProjectileScene { get; set; }
+    [Export] public NodePath ProjectileSpawnPointPath { get; set; }
     [Export] public float FireInterval { get; set; } = 1.2f;
     [Export] public float ProjectileSpeed { get; set; } = 300f;
     [Export] public float ProjectileDamage { get; set; } = 1.0f;
@@ -71,6 +72,13 @@ public partial class ProjectileEnemy : EnemyBase
 
         Vector2 dir = (_playerNode.GlobalPosition - GlobalPosition).Normalized();
 
+        Vector2 spawnPos = GlobalPosition;
+        if (ProjectileSpawnPointPath != null && ProjectileSpawnPointPath.ToString() != "")
+        {
+            if (GetNodeOrNull(ProjectileSpawnPointPath) is Node2D sp)
+                spawnPos = sp.GlobalPosition;
+        }
+
         Projectile proj = null;
         if (ProjectileScene != null)
         {
@@ -83,7 +91,7 @@ public partial class ProjectileEnemy : EnemyBase
         }
 
         AddChild(proj);
-        proj.GlobalPosition = GlobalPosition;
+        proj.GlobalPosition = spawnPos;
         proj.Initialize(dir, ProjectileSpeed, ProjectileDamage);
     }
 }
