@@ -179,7 +179,6 @@ public partial class TypingChallenge : Control
 		// Emit Completed for UI or visual listeners
 		EmitSignal(nameof(Completed), _challengeId, finalBuffer, timeLeft);
 
-
 		_typingManager?.ReportCompletion(_challengeId, new Dictionary<string, object>
 		{
 			["typed"] = finalBuffer,

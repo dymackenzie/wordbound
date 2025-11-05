@@ -169,6 +169,7 @@ public partial class Aura : Area2D
 
 		_isActive = true;
 
+		CallCameraMethod("StartKillCinematic");
 		EmitSignal(nameof(AuraActivatedEventHandler));
 		FollowNextInQueue();
 	}
@@ -237,7 +238,16 @@ public partial class Aura : Area2D
 	{
 		_isActive = false;
 		_queue.Clear();
+		CallCameraMethod("EndKillCinematic");
 		EmitSignal(nameof(AuraEndedEventHandler), success);
+	}
+
+	private void CallCameraMethod(string methodName)
+	{
+		var cam = GetViewport().GetCamera2D();
+		if (cam == null)
+			return;
+		try { cam.Call(methodName); } catch { }
 	}
 
 	/// <summary>
