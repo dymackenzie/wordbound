@@ -1,0 +1,9 @@
+{
+    "id": "blight",
+    "complexity": 3,
+    "cost": 10,
+    "tags": ["base"],
+    "components": [""],
+    "reward_seeds": 3,
+    "scene": "res://scenes/enemies/BaseFragment.tscn"
+}

@@ -1,7 +1,7 @@
 using Godot;
 using System;
 
-public partial class EnemyBase : CharacterBody2D
+public abstract partial class EnemyBase : CharacterBody2D
 {
 	[Signal] public delegate void PurifiedEventHandler(Node enemy);
 	[Signal] public delegate void DissolvedEventHandler(Node enemy, Node player);
@@ -39,8 +39,8 @@ public partial class EnemyBase : CharacterBody2D
     {
         base._Ready();
 
-        locatePlayer();
-        InstantiateTypingChallenge();
+		locatePlayer();
+		InstantiateTypingChallenge();
     }
     
     private void locatePlayer()
@@ -194,16 +194,21 @@ public partial class EnemyBase : CharacterBody2D
 	}
 
 	/// <summary>
-	/// Extension point: subclasses override this to set up the TypingChallenge
-	/// (text, time limit, any extra wiring).
+	/// Pulls from the word pool the appropriate word based off complexity.
 	/// </summary>
-	protected virtual void ConfigureTypingChallenge(string id, TypingChallenge challenge)
+	public abstract string GenerateChallengeText();
+	/// <summary>
+    /// Calculates the time limit based off user wpm and word length.
+    /// </summary>
+	public abstract double GenerateTimeLimit(string word);
+
+	public void ConfigureTypingChallenge(string id, TypingChallenge challenge)
 	{
 		if (challenge == null)
 			return;
 
-		string placeholderText = ""; // the spawner/room should set the real text later
-		double timeLimit = 6.0; // default time, can be overridden by the spawner or TypingManager
+		string placeholderText = GenerateChallengeText();
+		double timeLimit = GenerateTimeLimit(placeholderText);
 		challenge.Prepare(id, placeholderText, timeLimit);
 	}
 

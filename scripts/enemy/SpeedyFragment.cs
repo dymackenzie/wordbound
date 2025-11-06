@@ -16,22 +16,15 @@ public partial class SpeedyFragment : EnemyBase
         MoveSpeed *= SpeedMultiplier;
         SurroundDuration = Math.Min(SurroundDuration, ShortSurroundDuration);
         OrbitDuration = Math.Min(OrbitDuration, ShortOrbitDuration);
-
-        ConfigureTypingChallenge(Guid.NewGuid().ToString(), _typingChallenge);
     }
 
-    private string GenerateShortWord(int maxLen)
+    public override string GenerateChallengeText()
     {
-        return "test"; // placeholder implementation
+        return "";
     }
 
-    protected override void ConfigureTypingChallenge(string id, TypingChallenge challenge)
+    public override double GenerateTimeLimit(string word)
     {
-        if (challenge == null)
-            return;
-
-        string shortWord = GenerateShortWord(MaxShortWordLength);
-        double timeLimit = Math.Max(0.8, shortWord.Length * 0.6);
-        challenge.Prepare(id, shortWord, timeLimit);
+        return 0;
     }
 }

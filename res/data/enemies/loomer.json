@@ -1,0 +1,9 @@
+{
+    "id": "loomer",
+    "complexity": 6,
+    "cost": 15,
+    "tags": ["base"],
+    "components": ["heavy"],
+    "reward_seeds": 5,
+    "scene": "res://scenes/enemies/HeavyFragment.tscn"
+}

@@ -1,0 +1,9 @@
+{
+    "id": "whisp",
+    "complexity": 1,
+    "cost": 5,
+    "tags": ["base"],
+    "components": ["speedy"],
+    "reward_seeds": 1,
+    "scene": "res://scenes/enemies/SpeedyFragment.tscn"
+}

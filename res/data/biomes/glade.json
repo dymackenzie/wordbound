@@ -1,0 +1,15 @@
+{
+  "id": "glade",
+  "base_complexity": 0,
+  "base_budget": 200,
+  "budget_addition_per_wave": 50,
+  "waves": 10,
+  "spawn_mode": "stagger",
+  "pool": [
+    "blight",
+    "whisp",
+    "flick",
+    "mirror",
+    "loomer"
+  ]
+}

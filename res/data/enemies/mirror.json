@@ -1,0 +1,9 @@
+{
+    "id": "mirror",
+    "complexity": 3,
+    "cost": 15,
+    "tags": ["base"],
+    "components": ["mirror"],
+    "reward_seeds": 4,
+    "scene": "res://scenes/enemies/MirrorFragment.tscn"
+}

@@ -1,0 +1,9 @@
+{
+    "id": "flick",
+    "complexity": 3,
+    "cost": 15,
+    "tags": ["projectile"],
+    "components": [""],
+    "reward_seeds": 4,
+    "scene": "res://scenes/enemies/ProjectileFragment.tscn"
+}

@@ -1,7 +1,7 @@
 using Godot;
 using System;
 
-public partial class ProjectileEnemy : EnemyBase
+public abstract partial class ProjectileBase : EnemyBase
 {
     [Export] public PackedScene ProjectileScene { get; set; }
     [Export] public NodePath ProjectileSpawnPointPath { get; set; }
@@ -72,6 +72,7 @@ public partial class ProjectileEnemy : EnemyBase
 
         Vector2 dir = (_playerNode.GlobalPosition - GlobalPosition).Normalized();
 
+        // default to global position
         Vector2 spawnPos = GlobalPosition;
         if (ProjectileSpawnPointPath != null && ProjectileSpawnPointPath.ToString() != "")
         {
@@ -82,12 +83,7 @@ public partial class ProjectileEnemy : EnemyBase
         Projectile proj = null;
         if (ProjectileScene != null)
         {
-            var inst = ProjectileScene.Instantiate();
-            proj = inst as Projectile;
-            if (proj == null && inst is Node nodeInst)
-            {
-                proj = nodeInst as Projectile;
-            }
+            proj = ProjectileScene.Instantiate() as Projectile;
         }
 
         AddChild(proj);
