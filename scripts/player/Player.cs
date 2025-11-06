@@ -8,12 +8,22 @@ public partial class Player : CharacterBody2D
     [Signal] public delegate void DashedEventHandler();
     [Signal] public delegate void RelicEquippedEventHandler(string relicId);
     [Signal] public delegate void RelicUnequippedEventHandler(string relicId);
+    [Signal] public delegate void AnimationStartedEventHandler(string animationName);
+    [Signal] public delegate void AnimationFinishedEventHandler(string animationName);
 
     [Export] public float Speed { get; set; } = 220f;
     [Export] public float DashDistance { get; set; } = 180f;
     [Export] public float DashCooldown { get; set; } = 1.0f;
     [Export] public float DashInvulnerabilityTime { get; set; } = 0.12f;
     [Export] public bool CanDash { get; set; } = false;
+
+    [Export] public NodePath AnimationPlayerPath { get; set; } = new NodePath("AnimationPlayer");
+    [Export] public string IdleAnimationName { get; set; } = "idle";
+    [Export] public string RunAnimationName { get; set; } = "run";
+    [Export] public string DashAnimationName { get; set; } = "dash";
+    [Export] public string AttackAnimationName { get; set; } = "attack";
+    [Export] public double AnimationBlendSeconds { get; set; } = 0.12;
+    [Export] public float RunAnimationThreshold { get; set; } = 6.0f; // velocity magnitude to consider running
 
     private float _lastDashAt = -999f; // seconds (OS ticks)
     private bool _isDashing = false;
@@ -23,9 +33,33 @@ public partial class Player : CharacterBody2D
 
     private readonly HashSet<string> _equippedRelics = [];
 
+    private AnimationPlayer _animationPlayer = null;
+    private AnimationStateController _animController = null;
+    private string _currentAnimation = "";
+    private bool _isAttacking = false;
+
+    public AnimationState CurrentAnimationState { get; set; } = AnimationState.Idle;
+
     public override void _Ready()
     {
-        
+        _animationPlayer = GetNodeOrNull<AnimationPlayer>("AnimationPlayer");
+        _animationPlayer.Connect("animation_finished", new Callable(this, nameof(OnAnimationPlayerFinished)));
+
+        InitAnimationController();
+    }
+
+    private void InitAnimationController()
+    {
+        _animController = new AnimationStateController(this)
+        {
+            BlendSeconds = AnimationBlendSeconds,
+            RunThreshold = RunAnimationThreshold
+        };
+    }
+
+    private void UpdateAnimationState()
+    {
+        _animController?.Update(Velocity, _isDashing, _isAttacking);
     }
 
     public override void _PhysicsProcess(double delta)
@@ -64,6 +98,49 @@ public partial class Player : CharacterBody2D
         }
     }
 
+    private void OnAnimationPlayerFinished(string animName)
+    {
+        _currentAnimation = string.Empty;
+
+        if (animName == AttackAnimationName)
+            _isAttacking = false;
+        EmitSignal(nameof(AnimationFinished), animName);
+    }
+
+    /// <summary>
+    /// Plays the specified animation with optional blend time. Will start and finish signals so that
+    /// callers can rely on them.
+    /// </summary>
+    public void PlayAnimation(string animName, double blend = 0.12)
+    {
+        EmitSignal(nameof(AnimationStarted), animName);
+
+        if (!_animationPlayer.HasAnimation(animName))
+        {
+            EmitSignal(nameof(AnimationFinished), animName);
+            return;
+        }
+
+        _currentAnimation = animName;
+        _animationPlayer.Play(animName, customBlend: blend, customSpeed: 1.0f, fromEnd: false);
+    }
+
+    public void StopAnimation()
+    {
+        if (_animationPlayer != null)
+            _animationPlayer.Stop();
+        _currentAnimation = string.Empty;
+    }
+
+    public bool IsPlayingAnimation(string animName = null)
+    {
+        if (_animationPlayer == null)
+            return false;
+        if (string.IsNullOrEmpty(animName))
+            return !string.IsNullOrEmpty(_currentAnimation);
+        return _currentAnimation == animName;
+    }
+
     public void Dash()
     {
         if (!CanDash)
@@ -89,6 +166,17 @@ public partial class Player : CharacterBody2D
         _dashVelocity = input * (DashDistance / _dashDuration);
         _lastDashAt = now;
         EmitSignal(nameof(Dashed));
+
+        // update animation to dash immediately
+        UpdateAnimationState();
+    }
+
+    public void PlayAttackAnimation()
+    {
+        _isAttacking = true;
+
+        // controller will call PlayAnimation with blend
+        UpdateAnimationState();
     }
 
     public void EquipRelic(string relicId)
