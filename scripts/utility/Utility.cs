@@ -24,4 +24,9 @@ public static class Utility
         Array.Reverse(arr);
         return new string(arr);
     }
+
+    public static double DistanceToNode(Node n, Vector2 playerPos)
+	{
+        return n is Node2D nd2 ? nd2.GlobalPosition.DistanceTo(playerPos) : double.MaxValue;
+    }
 }

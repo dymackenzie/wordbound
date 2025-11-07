@@ -14,8 +14,9 @@ public partial class Aura : Area2D
 	[Signal] public delegate void AuraEndedEventHandler(bool success);
 
 	[Export] public NodePath PlayerPath = new();
+	[Export] public float StopDashingDistance = 32f;
 
-	private Node2D _player;
+	private Player _player;
 
 	// set of enemies currently within the aura
 	private readonly HashSet<Node> _enemiesInAura = [];
@@ -37,8 +38,7 @@ public partial class Aura : Area2D
 
 		if (PlayerPath.ToString() != "")
 		{
-			var node = GetNodeOrNull(PlayerPath);
-			_player = node as Node2D;
+			Player _player = GetNodeOrNull(PlayerPath) as Player;
 			_player.Connect("AuraActivatedEventHandler", new Callable(this, nameof(AttemptActivateAura)));
 		}
 		else
@@ -85,6 +85,15 @@ public partial class Aura : Area2D
 		try { _activeChallenge.Connect("Progress", new Callable(this, nameof(OnChallengeProgress))); } catch { }
 		try { _activeChallenge.Connect("Failed", new Callable(this, nameof(OnChallengeFailedFromChallenge))); } catch { }
 		try { _activeChallenge.Connect("Completed", new Callable(this, nameof(OnChallengeCompletedFromChallenge))); } catch { }
+
+		try { OneShotConnector.ConnectOnce(_player, nameof(Player.DashArrived), this, nameof(OnPlayerDashArrived)); } catch { }
+		_player.DashTowardsPosition((enemy as Node2D).GlobalPosition, StopDashingDistance);
+	}
+
+	private void OnPlayerDashArrived()
+	{
+		try { _player.Disconnect(nameof(Player.DashArrived), new Callable(this, nameof(OnPlayerDashArrived))); } catch { }
+		_player.PrepareAttackHold();
 	}
 
 	private void FollowNextInQueue()
@@ -165,7 +174,7 @@ public partial class Aura : Area2D
 		Vector2 playerPos = _player.GlobalPosition;
 		_queue.Clear();
 		// sort enemies by distance to player (nearest first)
-		_queue.AddRange(_enemiesInAura.OrderBy(e => DistanceToNode(e, playerPos)));
+		_queue.AddRange(_enemiesInAura.OrderBy(e => Utility.DistanceToNode(e, playerPos)));
 
 		_isActive = true;
 
@@ -174,17 +183,11 @@ public partial class Aura : Area2D
 		FollowNextInQueue();
 	}
 
-	private double DistanceToNode(Node n, Vector2 playerPos)
-	{
-		var nd2 = n as Node2D;
-		return nd2 != null ? nd2.GlobalPosition.DistanceTo(playerPos) : double.MaxValue;
-	}
-
 	private void InsertEnemyIntoQueueSorted(Node enemy)
 	{
 		Vector2 playerPos = _player.GlobalPosition;
-		double d = DistanceToNode(enemy, playerPos);
-		int idx = _queue.FindIndex(e => DistanceToNode(e, playerPos) > d);
+		double d = Utility.DistanceToNode(enemy, playerPos);
+		int idx = _queue.FindIndex(e => Utility.DistanceToNode(e, playerPos) > d);
 		if (idx < 0)
 			_queue.Add(enemy);
 		else
@@ -231,11 +234,26 @@ public partial class Aura : Area2D
 
 	private void OnChallengeCompletedFromChallenge(string challengeId, string finalBuffer, double timeLeft)
 	{
+		try { OneShotConnector.ConnectOnce(_player, nameof(Player.AnimationFinished), this, nameof(OnPlayerAttackFinished)); } catch { }
+		try
+		{
+			_player.ResumeAttack();
+		}
+		catch
+		{
+			_player.PlayAnimation(_player.AttackAnimationName);
+		}
+	}
+
+	private void OnPlayerAttackFinished(string animName)
+	{
+		try { _player.Disconnect(nameof(Player.AnimationFinished), new Callable(this, nameof(OnPlayerAttackFinished))); } catch { }
 		OnChallengeCompleted(_activeEnemy);
 	}
 
 	private void Deactivate(bool success)
 	{
+		_player.ResumeAttack();
 		_isActive = false;
 		_queue.Clear();
 		CallCameraMethod("EndKillCinematic");
