@@ -11,7 +11,8 @@ public partial class Player : CharacterBody2D
     [Signal] public delegate void RelicUnequippedEventHandler(string relicId);
     [Signal] public delegate void AnimationStartedEventHandler(string animationName);
     [Signal] public delegate void AnimationFinishedEventHandler(string animationName);
-
+    
+    [Export] public float Health { get; set; } = 10f;
     [Export] public float Speed { get; set; } = 220f;
     [Export] public float DashDistance { get; set; } = 180f;
     [Export] public float DashCooldown { get; set; } = 1.0f;
@@ -24,6 +25,8 @@ public partial class Player : CharacterBody2D
     [Export] public string RunAnimationName { get; set; } = "run";
     [Export] public string DashAnimationName { get; set; } = "dash";
     [Export] public string AttackAnimationName { get; set; } = "attack";
+    [Export] public string DamageAnimationName { get; set; } = "damage";
+    [Export] public string DeathAnimationName { get; set; } = "death";
     [Export] public double AnimationBlendSeconds { get; set; } = 0.12;
     [Export] public float RunAnimationThreshold { get; set; } = 6.0f; // velocity magnitude to consider running
     [Export] public float AttackHoldPosition { get; set; } = 0.5f; // normalized 0..1 of animation length to hold at
@@ -43,12 +46,14 @@ public partial class Player : CharacterBody2D
     private string _currentAnimation = "";
     private bool _isAttacking = false;
     private bool _isAttackHeld = false;
+    private bool _isDamaged = false;
+    private bool _isDead = false;
 
     public AnimationState CurrentAnimationState { get; set; } = AnimationState.Idle;
 
     public override void _Ready()
     {
-        _animationPlayer = GetNodeOrNull<AnimationPlayer>("AnimationPlayer");
+        _animationPlayer = GetNodeOrNull<AnimationPlayer>(AnimationPlayerPath);
         _animationPlayer.Connect("animation_finished", new Callable(this, nameof(OnAnimationPlayerFinished)));
 
         InitAnimationController();
@@ -129,10 +134,14 @@ public partial class Player : CharacterBody2D
 
     private void OnAnimationPlayerFinished(string animName)
     {
-        _currentAnimation = string.Empty;
+        _currentAnimation = "";
 
         if (animName == AttackAnimationName)
             _isAttacking = false;
+        if (animName == DamageAnimationName)
+            _isDamaged = false;
+        if (animName == DeathAnimationName)
+            _isDead = true;
         EmitSignal(nameof(AnimationFinished), animName);
     }
 
@@ -144,7 +153,7 @@ public partial class Player : CharacterBody2D
     {
         EmitSignal(nameof(AnimationStarted), animName);
 
-        if (!_animationPlayer.HasAnimation(animName))
+        if (string.IsNullOrEmpty(animName) || !_animationPlayer.HasAnimation(animName))
         {
             EmitSignal(nameof(AnimationFinished), animName);
             return;
@@ -270,6 +279,35 @@ public partial class Player : CharacterBody2D
 
         // continue playing the attack from the current position
         _animationPlayer.Play(AttackAnimationName);
+    }
+
+    public void PlayDamageAnimation()
+    {
+        _isDamaged = true;
+        if (_animationPlayer.HasAnimation(DamageAnimationName))
+            _animationPlayer.Play(DamageAnimationName, customBlend: AnimationBlendSeconds);
+    }
+
+    public void PlayDeathAnimation()
+    {
+        _isDead = true;
+        if (_animationPlayer.HasAnimation(DeathAnimationName))
+            _animationPlayer.Play(DeathAnimationName, customBlend: AnimationBlendSeconds);
+    }
+
+    /// <summary>
+    /// Called by enemies via Call("TakeDamage", amount).
+    /// </summary>
+    public void TakeDamage(float amount)
+    {
+        if (_isDead)
+            return;
+        Health -= amount;
+        try { PlayDamageAnimation(); } catch { }
+        if (Health <= 0f)
+        {
+            try { PlayDeathAnimation(); } catch { }
+        }
     }
 
     public void PlayAttackAnimation()
