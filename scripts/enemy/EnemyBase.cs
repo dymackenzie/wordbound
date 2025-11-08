@@ -6,8 +6,17 @@ public abstract partial class EnemyBase : CharacterBody2D
 	[Signal] public delegate void PurifiedEventHandler(Node enemy);
 	[Signal] public delegate void DissolvedEventHandler(Node enemy, Node player);
 	[Signal] public delegate void DamagedEventHandler(double newHealth);
+	[Signal] public delegate void AnimationStartedEventHandler(string animationName);
+	[Signal] public delegate void AnimationFinishedEventHandler(string animationName);
 
 	[Export] public PackedScene TypingChallengeScene { get; set; }
+
+	[Export] public NodePath AnimationPlayerPath { get; set; } = new NodePath("AnimationPlayer");
+	[Export] public string IdleAnimationName { get; set; } = "idle";
+	[Export] public string MoveAnimationName { get; set; } = "move";
+	[Export] public string AttackAnimationName { get; set; } = "attack";
+	[Export] public string DeathAnimationName { get; set; } = "death";
+	[Export] public double AnimationBlendSeconds { get; set; } = 0.08;
 
 	[Export] public float MoveSpeed { get; set; } = 120f;
 	[Export] public float OrbitSpeed { get; set; } = 2.0f; // radians/sec when circling
@@ -27,6 +36,13 @@ public abstract partial class EnemyBase : CharacterBody2D
     private float _orbitTimer = 0f;
     private float _attackTimer = 0f;
 
+	private AnimationPlayer _animationPlayer = null;
+	private string _currentAnimation = "";
+
+	private EnemyAnimationStateController _animController = null;
+	private bool _isAttacking = false;
+	private bool _isDead = false;
+
 	protected enum EnemyState
 	{
 		Surround,
@@ -39,11 +55,24 @@ public abstract partial class EnemyBase : CharacterBody2D
     {
         base._Ready();
 
-		locatePlayer();
+		LocatePlayer();
 		InstantiateTypingChallenge();
+
+		_animationPlayer = GetNodeOrNull<AnimationPlayer>(AnimationPlayerPath);
+		if (_animationPlayer != null)
+		{
+			try { _animationPlayer.Connect("animation_finished", new Callable(this, nameof(OnAnimationPlayerFinished))); } catch { }
+		}
+
+		// animation controller
+		_animController = new EnemyAnimationStateController(this)
+		{
+			BlendSeconds = AnimationBlendSeconds,
+			MoveThreshold = 6.0f
+		};
     }
     
-    private void locatePlayer()
+    private void LocatePlayer()
     {
         if (_playerNode == null)
         {
@@ -66,6 +95,57 @@ public abstract partial class EnemyBase : CharacterBody2D
 		_typingChallenge.Connect("Completed", new Callable(this, nameof(OnTypingChallengeCompleted)));
 		_typingChallenge.Connect("Failed", new Callable(this, nameof(OnTypingChallengeFailed)));
     }
+
+	public void PlayAnimation(string animName, double blend = 0.08)
+	{
+		EmitSignal(nameof(AnimationStarted), animName);
+		_currentAnimation = animName;
+		_animationPlayer.Play(animName, customBlend: blend);
+	}
+
+	public void StopAnimation()
+	{
+		_animationPlayer?.Stop();
+		_currentAnimation = string.Empty;
+	}
+
+	public bool IsPlayingAnimation(string animName = null)
+	{
+		if (_animationPlayer == null)
+			return false;
+		if (string.IsNullOrEmpty(animName))
+			return !string.IsNullOrEmpty(_currentAnimation);
+		return _currentAnimation == animName;
+	}
+
+	private void OnAnimationPlayerFinished(string animName)
+	{
+		_currentAnimation = string.Empty;
+		EmitSignal(nameof(AnimationFinished), animName);
+		try { OnAnimationFinished(animName); } catch { }
+		if (animName == AttackAnimationName)
+			_isAttacking = false;
+		if (animName == DeathAnimationName)
+			_isDead = true;
+	}
+
+	public void PlayIdleAnimation() => PlayAnimation(IdleAnimationName, AnimationBlendSeconds);
+	public void PlayMoveAnimation() => PlayAnimation(MoveAnimationName, AnimationBlendSeconds);
+	public void PlayAttackAnimation()
+	{
+		_isAttacking = true;
+		PlayAnimation(AttackAnimationName, AnimationBlendSeconds);
+	}
+	public void PlayDeathAnimation()
+	{
+		_isDead = true;
+		PlayAnimation(DeathAnimationName, AnimationBlendSeconds);
+	}
+
+	/// <summary>
+	/// Override in derived classes to react to animation completion events.
+	/// </summary>
+	protected virtual void OnAnimationFinished(string animName) { }
 
 	public virtual TypingChallenge GetTypingChallenge()
 	{
@@ -150,7 +230,6 @@ public abstract partial class EnemyBase : CharacterBody2D
 
 		Vector2 move = Vector2.Zero;
 
-		// State machine: Surround -> Orbit -> Approach (delegated to helpers)
 		switch (_state)
 		{
 			case EnemyState.Surround:
@@ -164,6 +243,14 @@ public abstract partial class EnemyBase : CharacterBody2D
 				break;
 		}
 
+
+		// update animation state based on movement and flags
+		try
+		{
+			_animController?.Update(move * MoveSpeed, _isAttacking, _isDead || Health <= 0f);
+		}
+		catch { }
+
 		// apply movement
 		var velocity = move * MoveSpeed;
 		GlobalPosition += velocity * (float)delta;
@@ -174,7 +261,7 @@ public abstract partial class EnemyBase : CharacterBody2D
 		if (_playerNode != null)
 		{
 			try { _playerNode.Call("TakeDamage", DamageOnDissolve); } catch { }
-			EmitSignal(nameof(DissolvedEventHandler), this, _playerNode);
+			EmitSignal(nameof(Dissolved), this, _playerNode);
 		}
 
         // default behavior: remove self (dissolve)
@@ -183,7 +270,7 @@ public abstract partial class EnemyBase : CharacterBody2D
 
 	private void OnTypingChallengeCompleted(string challengeId, string finalBuffer, double timeLeft)
 	{
-		EmitSignal(nameof(PurifiedEventHandler), this);
+		EmitSignal(nameof(Purified), this);
 		OnPurified();
 		Die();
 	}
@@ -197,6 +284,7 @@ public abstract partial class EnemyBase : CharacterBody2D
 	/// Pulls from the word pool the appropriate word based off complexity.
 	/// </summary>
 	public abstract string GenerateChallengeText();
+
 	/// <summary>
     /// Calculates the time limit based off user wpm and word length.
     /// </summary>
@@ -224,7 +312,7 @@ public abstract partial class EnemyBase : CharacterBody2D
 	public virtual void ApplyDamage(float amount)
 	{
 		Health -= amount;
-		try { EmitSignal(nameof(DamagedEventHandler), Health); } catch { }
+		try { EmitSignal(nameof(Damaged), Health); } catch { }
 		if (Health <= 0f)
 			Die();
 	}

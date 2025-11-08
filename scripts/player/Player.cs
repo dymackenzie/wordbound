@@ -209,7 +209,7 @@ public partial class Player : CharacterBody2D
         if (!CanDash)
             return;
 
-        var dir = (worldPosition - GlobalPosition);
+        var dir = worldPosition - GlobalPosition;
         if (dir.LengthSquared() <= 0.0001f)
             return;
         dir = dir.Normalized();
@@ -221,7 +221,7 @@ public partial class Player : CharacterBody2D
         if (stopDistance > 0f)
             DashStopDistance = stopDistance;
         _lastDashAt = (float)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
-        try { EmitSignal(nameof(DashedEventHandler)); } catch { }
+        try { EmitSignal(nameof(Dashed)); } catch { }
         UpdateAnimationState();
     }
 

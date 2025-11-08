@@ -127,9 +127,9 @@ public partial class Aura : Area2D
 
 		if (_enemiesInAura.Add(body))
 		{
-			EmitSignal(nameof(EnemyEnteredAuraEventHandler), body);
-			EmitSignal(nameof(AuraActivationReadyEventHandler), _enemiesInAura.Count > 0);
-			
+			EmitSignal(nameof(EnemyEnteredAura), body);
+			EmitSignal(nameof(AuraActivationReady), _enemiesInAura.Count > 0);
+
 			if (_isActive)
 			{
 				InsertEnemyIntoQueueSorted(body);
@@ -150,8 +150,8 @@ public partial class Aura : Area2D
 
 		if (_enemiesInAura.Remove(body))
 		{
-			EmitSignal(nameof(EnemyExitedAuraEventHandler), body);
-			EmitSignal(nameof(AuraActivationReadyEventHandler), _enemiesInAura.Count > 0);
+			EmitSignal(nameof(EnemyExitedAura), body);
+			EmitSignal(nameof(AuraActivationReady), _enemiesInAura.Count > 0);
 			_queue.Remove(body);
 		}
 	}
@@ -167,7 +167,7 @@ public partial class Aura : Area2D
 
 		if (_enemiesInAura.Count == 0)
 		{
-			EmitSignal(nameof(AuraActivationReadyEventHandler), false);
+			EmitSignal(nameof(AuraActivationReady), false);
 			return;
 		}
 
@@ -179,7 +179,7 @@ public partial class Aura : Area2D
 		_isActive = true;
 
 		CallCameraMethod("StartKillCinematic");
-		EmitSignal(nameof(AuraActivatedEventHandler));
+		EmitSignal(nameof(AuraActivated));
 		FollowNextInQueue();
 	}
 
@@ -205,7 +205,7 @@ public partial class Aura : Area2D
 		_queue.Remove(enemy);
 		_enemiesInAura.Remove(enemy);
 
-		EmitSignal(nameof(EnemyPurifiedEventHandler), enemy);
+		EmitSignal(nameof(EnemyPurified), enemy);
 
 		// if this was the active enemy, clear and follow next
 		if (_activeEnemy == enemy)
@@ -228,7 +228,7 @@ public partial class Aura : Area2D
 	private void OnChallengeFailedFromChallenge(string challengeId, string reason)
 	{
 		// map active challenge -> enemy and forward
-		EmitSignal(nameof(AuraFailedEventHandler), _activeEnemy);
+		EmitSignal(nameof(AuraFailed), _activeEnemy);
 		Deactivate(false);
 	}
 
@@ -257,7 +257,7 @@ public partial class Aura : Area2D
 		_isActive = false;
 		_queue.Clear();
 		CallCameraMethod("EndKillCinematic");
-		EmitSignal(nameof(AuraEndedEventHandler), success);
+		EmitSignal(nameof(AuraEnded), success);
 	}
 
 	private void CallCameraMethod(string methodName)
