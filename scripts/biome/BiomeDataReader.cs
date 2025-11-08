@@ -76,7 +76,7 @@ public static class BiomeDataReader
         public int Waves { get; set; } = 1;
 
         /// <summary>
-        /// The spawn mode for the biome (stagger, ambush, overload).
+        /// The spawn mode for the biome (stagger, burst).
         /// </summary>
         public string SpawnMode { get; set; } = "stagger";
 
