@@ -11,6 +11,7 @@ public partial class Player : CharacterBody2D
     [Signal] public delegate void RelicUnequippedEventHandler(string relicId);
     [Signal] public delegate void AnimationStartedEventHandler(string animationName);
     [Signal] public delegate void AnimationFinishedEventHandler(string animationName);
+    [Signal] public delegate void PlayerDiedEventHandler();
     
     [Export] public float Health { get; set; } = 10f;
     [Export] public float Speed { get; set; } = 220f;
@@ -70,7 +71,7 @@ public partial class Player : CharacterBody2D
 
     private void UpdateAnimationState()
     {
-        _animController?.Update(Velocity, _isDashing, _isAttacking);
+        _animController?.Update(Velocity, _isDashing, _isAttacking, _isDamaged, _isDead);
     }
 
     public override void _PhysicsProcess(double delta)
@@ -141,7 +142,10 @@ public partial class Player : CharacterBody2D
         if (animName == DamageAnimationName)
             _isDamaged = false;
         if (animName == DeathAnimationName)
+        {
             _isDead = true;
+            try { EmitSignal(nameof(PlayerDiedEventHandler)); } catch { }
+        }
         EmitSignal(nameof(AnimationFinished), animName);
     }
 

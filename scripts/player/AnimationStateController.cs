@@ -1,12 +1,18 @@
 using Godot;
 using System;
 
+/// <summary>
+/// Animation states for the player character.
+/// Higher numbers indicate higher priority.
+/// </summary>
 public enum AnimationState
 {
     Idle = 0,
     Run = 1,
     Dash = 2,
     Attack = 3,
+    Damage = 4,
+    Death = 5,
 }
 
 public class AnimationStateController
@@ -25,7 +31,7 @@ public class AnimationStateController
     /// <summary>
     /// Decide which animation to play based on velocity and flags.
     /// </summary>
-    public void Update(object velocityObj, bool isDashing, bool isAttacking)
+    public void Update(object velocityObj, bool isDashing, bool isAttacking, bool isDamaged = false, bool isDead = false)
     {
         Vector2 velocity;
         try
@@ -37,9 +43,12 @@ public class AnimationStateController
         }
         catch { velocity = Vector2.Zero; }
 
-        // determine desired animation state
         AnimationState desiredState;
-        if (isAttacking)
+        if (isDead)
+            desiredState = AnimationState.Death;
+        else if (isDamaged)
+            desiredState = AnimationState.Damage;
+        else if (isAttacking)
             desiredState = AnimationState.Attack;
         else if (isDashing)
             desiredState = AnimationState.Dash;
@@ -53,9 +62,11 @@ public class AnimationStateController
 
         _current = desiredState;
 
-        // map enum to animation name
-        string animName = _current switch
+        string animName;
+        animName = _current switch
         {
+            AnimationState.Death => _player.DeathAnimationName,
+            AnimationState.Damage => _player.DamageAnimationName,
             AnimationState.Attack => _player.AttackAnimationName,
             AnimationState.Dash => _player.DashAnimationName,
             AnimationState.Run => _player.RunAnimationName,
