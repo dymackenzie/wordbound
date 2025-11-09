@@ -32,13 +32,15 @@ public partial class Player : CharacterBody2D
     [Export] public float RunAnimationThreshold { get; set; } = 6.0f; // velocity magnitude to consider running
     [Export] public float AttackHoldPosition { get; set; } = 0.5f; // normalized 0..1 of animation length to hold at
 
-    private float _lastDashAt = -999f; // seconds (OS ticks)
-    private bool _isDashing = false;
-    private Vector2 _dashVelocity = Vector2.Zero;
-    private float _dashTimeLeft = 0f;
-    private const float _dashDuration = 0.16f;
+    [Export] public PackedScene GhostScene { get; set; } = null;
+    [Export] public bool GhostEnabled { get; set; } = true;
+    [Export] public float GhostSpawnInterval { get; set; } = 0.05f;
+    [Export] public float GhostLifetimeOverride { get; set; } = 0.0f; // 0 = use ghost's default
+    [Export] public float GhostInitialOpacity { get; set; } = 0.6f;
 
-    private Vector2? _dashTargetPosition = null;
+    private float _lastDashAt = -999f; // seconds (OS ticks)
+    private const float _dashDuration = 0.16f;
+    private DashController _dashController = null;
 
     private readonly HashSet<string> _equippedRelics = [];
 
@@ -56,8 +58,27 @@ public partial class Player : CharacterBody2D
     {
         _animationPlayer = GetNodeOrNull<AnimationPlayer>(AnimationPlayerPath);
         _animationPlayer.Connect("animation_finished", new Callable(this, nameof(OnAnimationPlayerFinished)));
-
         InitAnimationController();
+        InitDashController();
+    }
+    
+    private void InitDashController()
+    {
+        _dashController = new DashController
+        {
+            DashDistance = DashDistance,
+            DashDuration = _dashDuration,
+            DashStopDistance = DashStopDistance
+        };
+        _dashController.OnDashed += () => { try { EmitSignal(nameof(Dashed)); } catch { } };
+        _dashController.OnDashArrived += () => { try { EmitSignal(nameof(DashArrived)); } catch { }; PrepareAttackHold(); };
+        _dashController.OnDashEnded += () => { };
+
+        // configure ghost behaviour on controller
+        _dashController.GhostScene = GhostScene;
+        _dashController.GhostEnabled = GhostEnabled;
+        _dashController.GhostLifetimeOverride = GhostLifetimeOverride;
+        _dashController.GhostInitialOpacity = GhostInitialOpacity;
     }
 
     private void InitAnimationController()
@@ -71,12 +92,13 @@ public partial class Player : CharacterBody2D
 
     private void UpdateAnimationState()
     {
-        _animController?.Update(Velocity, _isDashing, _isAttacking, _isDamaged, _isDead);
+        bool isDashing = _dashController?.IsDashing ?? false;
+        _animController?.Update(Velocity, isDashing, _isAttacking, _isDamaged, _isDead);
     }
 
     public override void _PhysicsProcess(double delta)
     {
-        if (HandleDashPhysics(delta))
+        if (_dashController != null && _dashController.Update(this, delta))
             return;
 
         var input = new Vector2(
@@ -89,36 +111,6 @@ public partial class Player : CharacterBody2D
 
         Velocity = input * Speed;
         MoveAndSlide();
-    }
-
-    private bool HandleDashPhysics(double delta)
-    {
-        if (_isDashing)
-        {
-            _dashTimeLeft -= (float)delta;
-            Velocity = _dashVelocity;
-            MoveAndSlide();
-
-            // if we have a target position, check if we've arrived
-            if (_dashTargetPosition.HasValue)
-            {
-                var pos = GlobalPosition;
-                var targ = _dashTargetPosition.Value;
-                if (pos.DistanceTo(targ) <= DashStopDistance)
-                {
-                    _isDashing = false;
-                    _dashTargetPosition = null;
-                    Velocity = Vector2.Zero;
-                    EmitSignal(nameof(DashArrived));
-                    PrepareAttackHold();
-                }
-            }
-
-            if (_dashTimeLeft <= 0f && _isDashing)
-                _isDashing = false;
-            return true;
-        }
-        return false;
     }
 
     public override void _Input(InputEvent @event)
@@ -183,6 +175,9 @@ public partial class Player : CharacterBody2D
         return _currentAnimation == animName;
     }
 
+    /// <summary>
+    /// Initiates a dash in the direction of current input, if any.
+    /// </summary>
     public void Dash()
     {
         if (!CanDash)
@@ -202,14 +197,9 @@ public partial class Player : CharacterBody2D
             return; // no direction to dash
 
         input = input.Normalized();
-        _isDashing = true;
-        _dashTimeLeft = _dashDuration;
-        // dash velocity set so the character travels roughly DashDistance over _dashDuration
-        _dashVelocity = input * (DashDistance / _dashDuration);
-        _lastDashAt = now;
-        EmitSignal(nameof(Dashed));
 
-        // update animation to dash immediately
+        _lastDashAt = now;
+        _dashController?.StartDash(this, input, DashDistance, _dashDuration);
         UpdateAnimationState();
     }
 
@@ -227,14 +217,8 @@ public partial class Player : CharacterBody2D
             return;
         dir = dir.Normalized();
 
-        _isDashing = true;
-        _dashTimeLeft = _dashDuration;
-        _dashVelocity = dir * (DashDistance / _dashDuration);
-        _dashTargetPosition = worldPosition;
-        if (stopDistance > 0f)
-            DashStopDistance = stopDistance;
         _lastDashAt = (float)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
-        try { EmitSignal(nameof(Dashed)); } catch { }
+        _dashController?.StartDashTowards(this, worldPosition, DashDistance, _dashDuration, stopDistance);
         UpdateAnimationState();
     }
 
