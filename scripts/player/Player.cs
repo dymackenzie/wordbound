@@ -46,6 +46,7 @@ public partial class Player : CharacterBody2D
 
     private AnimationPlayer _animationPlayer = null;
     private AnimationStateController _animController = null;
+    private RelicManager _relicManager = null;
     private string _currentAnimation = "";
     private bool _isAttacking = false;
     private bool _isAttackHeld = false;
@@ -79,6 +80,21 @@ public partial class Player : CharacterBody2D
         _dashController.GhostEnabled = GhostEnabled;
         _dashController.GhostLifetimeOverride = GhostLifetimeOverride;
         _dashController.GhostInitialOpacity = GhostInitialOpacity;
+
+        // ensure a RelicManager child exists and is ready to use
+        _relicManager = GetNodeOrNull<RelicManager>("RelicManager");
+        if (_relicManager == null)
+        {
+            _relicManager = new RelicManager();
+            AddChild(_relicManager);
+        }
+    }
+
+    // Convenience for testing: equip a relic by id at runtime
+    public bool EquipRelicById(string relicId)
+    {
+        if (_relicManager == null) return false;
+        return _relicManager.EquipRelic(relicId);
     }
 
     private void InitAnimationController()

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "heart_of_vigor",
+    "version": 1,
+    "name_key": "Heart of Vigor",
+    "desc_key": "Increases your maximum health.",
+    "icon": "res://assets/ui/relics/heart_of_vigor.png",
+    "rarity": "uncommon",
+    "weight": 1.0,
+    "stackable": true,
+    "max_stacks": 3,
+    "effects": [
+      { "type": "StatModifier", "timing": "on_equip", "params": { "stat": "Health", "mode": "add", "value": 5 } }
+    ]
+  },
+  {
+    "id": "swift_shard",
+    "version": 1,
+    "name_key": "Swift Shard",
+    "desc_key": "Reduces dash cooldown.",
+    "icon": "res://assets/ui/relics/swift_shard.png",
+    "rarity": "uncommon",
+    "weight": 1.0,
+    "stackable": true,
+    "max_stacks": 3,
+    "effects": [
+      { "type": "StatModifier", "timing": "on_equip", "params": { "stat": "DashCooldown", "mode": "mul", "value": 0.85 } }
+    ]
+  },
+  {
+    "id": "seed_pouch",
+    "version": 1,
+    "name_key": "Seed Pouch",
+    "desc_key": "Enemies drop extra seeds when killed.",
+    "icon": "res://assets/ui/relics/seed_pouch.png",
+    "rarity": "uncommon",
+    "weight": 1.0,
+    "stackable": true,
+    "max_stacks": 3,
+    "effects": [
+      { "type": "SeedBonus", "timing": "on_kill", "params": { "extra": 1 } }
+    ]
+  }
+]
