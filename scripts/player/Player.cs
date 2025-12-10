@@ -7,8 +7,6 @@ public partial class Player : CharacterBody2D
     [Signal] public delegate void AuraActivatedEventHandler();
     [Signal] public delegate void DashedEventHandler();
     [Signal] public delegate void DashArrivedEventHandler();
-    [Signal] public delegate void RelicEquippedEventHandler(string relicId);
-    [Signal] public delegate void RelicUnequippedEventHandler(string relicId);
     [Signal] public delegate void AnimationStartedEventHandler(string animationName);
     [Signal] public delegate void AnimationFinishedEventHandler(string animationName);
     [Signal] public delegate void PlayerDiedEventHandler();
@@ -41,8 +39,6 @@ public partial class Player : CharacterBody2D
     private float _lastDashAt = -999f; // seconds (OS ticks)
     private const float _dashDuration = 0.16f;
     private DashController _dashController = null;
-
-    private readonly HashSet<string> _equippedRelics = [];
 
     private AnimationPlayer _animationPlayer = null;
     private AnimationStateController _animController = null;
@@ -333,18 +329,4 @@ public partial class Player : CharacterBody2D
         // controller will call PlayAnimation with blend
         UpdateAnimationState();
     }
-
-    public void EquipRelic(string relicId)
-    {
-        if (_equippedRelics.Add(relicId))
-            EmitSignal(nameof(RelicEquipped), relicId);
-    }
-
-    public void UnequipRelic(string relicId)
-    {
-        if (_equippedRelics.Remove(relicId))
-            EmitSignal(nameof(RelicUnequipped), relicId);
-    }
-
-    public IReadOnlyCollection<string> GetEquippedRelics() => _equippedRelics;
 }
