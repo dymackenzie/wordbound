@@ -84,6 +84,22 @@ public partial class RelicManager : Node
                 e.OnKill(GetParent(), inst);
     }
 
+    public int GetKillSeedBonus(Node enemy)
+    {
+        int total = 0;
+        foreach (var inst in _equipped.Values)
+        {
+            foreach (var e in inst.Effects)
+            {
+                if (e is ISeedDropModifier sdm)
+                {
+                   total += sdm.GetExtraDrops(GetParent(), inst, enemy);
+                }
+            }
+        }
+        return total;
+    }
+
     public void NotifyDash()
     {
         foreach (var inst in _equipped.Values)

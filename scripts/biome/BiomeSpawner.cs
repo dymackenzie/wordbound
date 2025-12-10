@@ -217,13 +217,14 @@ public partial class BiomeSpawner : Node
             return null;
         }
 
-        Node2D inst = packed.Instantiate() as Node2D;
+        EnemyBase inst = packed.Instantiate() as EnemyBase;
         if (inst == null)
         {
             GD.PrintErr($"LevelSpawner: instantiate returned null for '{scenePath}'");
             return null;
         }
 
+        inst.SeedReward = def.RewardSeeds;
         inst.Position = GetSpawnPositionOutsideViewport();
         _spawnParent.AddChild(inst);
 

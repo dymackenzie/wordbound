@@ -300,6 +300,18 @@ public partial class Player : CharacterBody2D
     }
 
     /// <summary>
+    /// Called by pickup items when the player picks up seeds. Plays a small scale "pop" effect.
+    /// </summary>
+    public void OnSeedPickedUp()
+    {
+        var original = Scale;
+        var target = original * 1.12f;
+        var tween = CreateTween();
+        tween.TweenProperty(this, "scale", target, 0.08).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+        tween.TweenProperty(this, "scale", original, 0.12).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.In).SetDelay(0.08);
+    }
+
+    /// <summary>
     /// Called by enemies via Call("TakeDamage", amount).
     /// </summary>
     public void TakeDamage(float amount)

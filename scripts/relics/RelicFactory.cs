@@ -38,7 +38,7 @@ public static class RelicFactory
     }
 }
 
-public class SeedBonus : IRelicEffect
+public class SeedBonus : IRelicEffect, ISeedDropModifier
 {
     private readonly int _extra = 1;
 
@@ -50,28 +50,13 @@ public class SeedBonus : IRelicEffect
     public void OnEquip(Node owner, RelicInstance instance) { }
     public void OnUnequip(Node owner, RelicInstance instance) { }
 
-    public void OnKill(Node owner, RelicInstance instance)
+    public int GetExtraDrops(Node owner, RelicInstance instance, Node enemy)
     {
-        try
-        {
-            int stacks = Math.Max(1, instance.Stacks);
-            int bonus = _extra * stacks;
-
-            // assuming owner has a GameState node to add seeds to
-            if (owner?.GetTree()?.Root?.GetNodeOrNull("GameState") is GameState gameState)
-            {
-                gameState.AddSeeds(bonus);
-            }
-            else
-            {
-                GD.PrintErr("SeedBonus: GameState not found to add seeds.");
-            }
-        }
-        catch (Exception ex)
-        {
-            GD.PrintErr($"SeedBonus: failed to add seeds: {ex.Message}");
-        }
+        int stacks = Math.Max(1, instance?.Stacks ?? 1);
+        return _extra * stacks;
     }
+
+    public void OnKill(Node owner, RelicInstance instance) { }
 }
 
 public class BasicStatModifier : IRelicEffect

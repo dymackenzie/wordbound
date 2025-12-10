@@ -28,6 +28,9 @@ public abstract partial class EnemyBase : CharacterBody2D
 	[Export] public float DamageOnDissolve { get; set; } = 1.0f;
 	[Export] public float Health { get; set; } = 1.0f;
 
+	[Export] public int SeedReward { get; set; } = 1;
+	[Export] public PackedScene SeedPickupScene { get; set; } = null;
+
 	protected TypingChallenge _typingChallenge;
 	protected Node2D _playerNode;
 
@@ -303,7 +306,7 @@ public abstract partial class EnemyBase : CharacterBody2D
     // hooks for derived classes
     protected virtual void OnPurified()
     {
-        ApplyDamage(Health);
+		ApplyDamage(Health);
     }
     
 	protected virtual void OnChallengeFailed(string reason) { }
@@ -319,7 +322,37 @@ public abstract partial class EnemyBase : CharacterBody2D
 
 	protected virtual void Die()
 	{
+		var relicMgr = _playerNode.GetNodeOrNull<RelicManager>("RelicManager");
+		int extra = relicMgr.GetKillSeedBonus(this);
+		relicMgr.NotifyKill();
+
+		SpawnSeedDrops(SeedReward + extra);
+
 		QueueFree();
+	}
+
+	/// <summary>
+	/// Spawns `count` seed pickups that scatter and then home to the player.
+	/// </summary>
+	protected void SpawnSeedDrops(int count)
+	{
+		if (count <= 0) return;
+		var rng = new RandomNumberGenerator();
+		rng.Randomize();
+
+		for (int i = 0; i < count; i++)
+		{
+			Sprite2D seedNode = SeedPickupScene.Instantiate() as Sprite2D;
+
+			var offset = new Vector2((float)rng.RandfRange(-8f, 8f), (float)rng.RandfRange(-8f, 8f));
+			seedNode.GlobalPosition = GlobalPosition + offset;
+
+			// add to same parent as enemy so coordinate space is consistent
+			if (GetParent() != null)
+				GetParent().AddChild(seedNode);
+			else
+				GetTree().Root.AddChild(seedNode);
+		}
 	}
 }
 
