@@ -86,7 +86,7 @@ public partial class Player : CharacterBody2D
         }
     }
 
-    // Convenience for testing: equip a relic by id at runtime
+    // convenice method to equip a relic by its ID
     public bool EquipRelicById(string relicId)
     {
         if (_relicManager == null) return false;
