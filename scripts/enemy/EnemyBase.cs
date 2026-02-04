@@ -10,9 +10,7 @@ public abstract partial class EnemyBase : CharacterBody2D
 	[Signal] public delegate void AnimationFinishedEventHandler(string animationName);
 
 	[Export] public PackedScene TypingChallengeScene { get; set; }
-
-	[Export]
-	public ChallengeBehavior Behavior { get; set; }
+	[Export] public ChallengeBehavior Behavior { get; set; }
 
 	[Export] public NodePath AnimationPlayerPath { get; set; } = new NodePath("AnimationPlayer");
 	[Export] public string IdleAnimationName { get; set; } = "idle";
