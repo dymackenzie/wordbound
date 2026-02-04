@@ -224,6 +224,8 @@ public partial class BiomeSpawner : Node
             return null;
         }
 
+        inst.EnemyComplexity = def.Complexity;
+        inst.BiomeBaseComplexity = _biome.BaseComplexity;
         inst.SeedReward = def.RewardSeeds;
         inst.Position = GetSpawnPositionOutsideViewport();
         _spawnParent.AddChild(inst);

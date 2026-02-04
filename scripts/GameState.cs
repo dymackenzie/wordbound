@@ -1,6 +1,7 @@
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 public partial class GameState : Node
 {
@@ -13,6 +14,8 @@ public partial class GameState : Node
     private SaveManager _saveManager;
 
     public int Seeds { get; private set; } = 0;
+    public int Difficulty { get; set; } = 1;
+
     public List<string> UnlockedRelics { get; private set; } = [];
     public Dictionary<string, object> Conservatory { get; private set; } = [];
 
@@ -57,6 +60,7 @@ public partial class GameState : Node
         var payload = new SavePayload
         {
             Seeds = Seeds,
+            Difficulty = Difficulty,
             UnlockedRelics = UnlockedRelics,
             Conservatory = Conservatory
         };
@@ -73,6 +77,8 @@ public partial class GameState : Node
 
         Seeds = payload?.Seeds ?? 0;
 
+        Difficulty = payload?.Difficulty ?? 1;
+
         UnlockedRelics.Clear();
         if (payload?.UnlockedRelics != null)
         {
@@ -82,5 +88,34 @@ public partial class GameState : Node
         Conservatory = payload?.Conservatory ?? [];
 
         EmitSignal(nameof(SeedsChanged), Seeds);
+    }
+
+    /// <summary>
+    /// Mapping from difficulty levels to word pool file paths.
+    /// </summary>
+    public Dictionary<int, string> DifficultyPoolMap { get; set; } = new Dictionary<int, string>
+    {
+        { 1, "res://data/words/pools/english_1k_pool.json" },
+        { 2, "res://data/words/pools/english_5k_pool.json" },
+        { 3, "res://data/words/pools/english_10k_pool.json" },
+        { 4, "res://data/words/pools/english_25k_pool.json" }
+    };
+
+    /// <summary>
+    /// Gets the appropriate word pool file path for the given difficulty level.
+    /// </summary>
+    public string GetPoolPathForDifficulty(int difficulty)
+    {
+        if (DifficultyPoolMap == null || DifficultyPoolMap.Count == 0)
+            return "res://data/words/pools/english_5k_pool.json";
+
+        // prefer the highest configured key <= difficulty, otherwise the highest available
+        var keys = DifficultyPoolMap.Keys.OrderByDescending(k => k).ToList();
+        foreach (var k in keys)
+        {
+            if (k <= difficulty)
+                return DifficultyPoolMap[k];
+        }
+        return DifficultyPoolMap[keys.First()];
     }
 }

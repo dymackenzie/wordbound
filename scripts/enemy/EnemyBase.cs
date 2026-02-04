@@ -17,7 +17,9 @@ public abstract partial class EnemyBase : CharacterBody2D
 	[Export] public string AttackAnimationName { get; set; } = "attack";
 	[Export] public string DeathAnimationName { get; set; } = "death";
 	[Export] public double AnimationBlendSeconds { get; set; } = 0.08;
-
+	
+	[Export] public int EnemyComplexity { get; set; } = 1;
+	[Export] public int BiomeBaseComplexity { get; set; } = 0;
 	[Export] public float MoveSpeed { get; set; } = 120f;
 	[Export] public float OrbitSpeed { get; set; } = 2.0f; // radians/sec when circling
 	[Export] public float SurroundDistance { get; set; } = 120f; // desired distance to player when surrounding
@@ -30,6 +32,7 @@ public abstract partial class EnemyBase : CharacterBody2D
 
 	[Export] public int SeedReward { get; set; } = 1;
 	[Export] public PackedScene SeedPickupScene { get; set; } = null;
+
 
 	protected TypingChallenge _typingChallenge;
 	protected Node2D _playerNode;

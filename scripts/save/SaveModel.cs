@@ -5,6 +5,7 @@ using System.Collections.Generic;
 public sealed class SavePayload
 {
     public int Seeds { get; set; } = 0;
+    public int Difficulty { get; set; } = 1;
     public List<string> UnlockedRelics { get; set; } = [];
     public Dictionary<string, object> Conservatory { get; set; } = [];
 
@@ -13,6 +14,7 @@ public sealed class SavePayload
         var dict = new Dictionary<string, object>
         {
             ["seeds"] = Seeds
+            , ["difficulty"] = Difficulty
         };
         var arr = new List<string>();
         if (UnlockedRelics != null)
@@ -32,6 +34,9 @@ public sealed class SavePayload
 
         if (dict.ContainsKey("seeds"))
             payload.Seeds = Convert.ToInt32(dict["seeds"]);
+
+        if (dict.ContainsKey("difficulty"))
+            payload.Difficulty = Convert.ToInt32(dict["difficulty"]);
 
         payload.UnlockedRelics = new List<string>();
         if (dict.ContainsKey("unlocked_relics") && dict["unlocked_relics"] is List<object> unlockedRelicsArray)
