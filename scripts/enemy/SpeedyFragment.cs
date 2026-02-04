@@ -20,11 +20,12 @@ public partial class SpeedyFragment : EnemyBase
 
     public override string GenerateChallengeText()
     {
-        return "";
+        return PickWord(-1);
     }
 
     public override double GenerateTimeLimit(string word)
     {
-        return 0;
+        double baseTime = BaseTimeForWord(word, -1);
+        return Math.Max(0.5, baseTime * 0.6);
     }
 }

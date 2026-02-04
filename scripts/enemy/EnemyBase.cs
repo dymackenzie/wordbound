@@ -11,6 +11,9 @@ public abstract partial class EnemyBase : CharacterBody2D
 
 	[Export] public PackedScene TypingChallengeScene { get; set; }
 
+	[Export]
+	public ChallengeBehavior Behavior { get; set; }
+
 	[Export] public NodePath AnimationPlayerPath { get; set; } = new NodePath("AnimationPlayer");
 	[Export] public string IdleAnimationName { get; set; } = "idle";
 	[Export] public string MoveAnimationName { get; set; } = "move";
@@ -304,6 +307,31 @@ public abstract partial class EnemyBase : CharacterBody2D
 		string placeholderText = GenerateChallengeText();
 		double timeLimit = GenerateTimeLimit(placeholderText);
 		challenge.Prepare(id, placeholderText, timeLimit);
+	}
+
+	protected int GetUserDifficulty(int offset = 0)
+	{
+		GameState gs = GetTree().Root.GetNodeOrNull<GameState>("GameState");
+		return Math.Max(1, gs.Difficulty + offset);
+	}
+
+	protected int GetBaseComplexity()
+	{
+		int enemyComplexity = Math.Max(1, EnemyComplexity);
+		int biomeComplexity = Math.Max(0, BiomeBaseComplexity);
+		return Math.Max(1, enemyComplexity + biomeComplexity);
+	}
+
+	protected string PickWord(int difficultyOffset = 0)
+	{
+		int ud = GetUserDifficulty(difficultyOffset);
+		return WordPoolService.GetWord(GetBaseComplexity(), ud);
+	}
+
+	protected double BaseTimeForWord(string word, int difficultyOffset = 0)
+	{
+		int ud = GetUserDifficulty(difficultyOffset);
+		return WordPoolService.GetBaseTimeForWord(word, ud);
 	}
 
     // hooks for derived classes
